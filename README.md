@@ -1,13 +1,44 @@
-TinyLISP 
+# TinyLISP 
 
-The Tiny Lisp interpreter is written in Digital Mars D and supports a small but consistent suite of builtin functions which should be familiar to Lisp and Scheme users, however a distinctive feature is that this Lisp variant doesn't have integers, strings or other non-symbolic datatypes, it only has symbols and expressions.
+The Tiny Lisp interpreter is written in Digital Mars D and supports a small but consistent suite of builtin functions which should be familiar to Lisp and Scheme users, however a distinctive feature is that this Lisp variant doesn't have integers, strings or other non-symbolic data types, it only has symbols and expressions.
+
+  * Garbage collection
+  * Lazy evaluation
+  * Familiar LISP syntax
+  * UTF-8 in symbols
+  * First-class functions
+  * Memory safe interpreter
+
+The interpreter can operate in two modes: REPL and batch, it also accepts a list of files on the command line which will be silently evaluated and can be used to prepare the environment or load libraries of functions etc.
+
+Batch mode reads one expression from `stdin` and prints the evaluation result to `stdout`.
+
+```
+$ echo '(eq T T)' | ./lisp
+T
+```
+
+REPL mode provides an interactive shell environment to evaluate commands one at a time, it facilitates exploratory programming and debugging.
+
+```
+$ ./lisp
+> (eq T T)
+= T
+> ...
+```
+
+### Bugs
+
+ * `(cdr! (car (env)) (env))` = segfault during `Obj.toString()`
+ * `'((X . Y) '(Z . H))` parses as `((X . Y))`
+ * `(ignore (env! (car! (car (env)) (env))))` doesn't change (env)
 
 ## Syntax Conventions
 
  * Symbol names should be `UPPERCASE`
  * Function names should be `lowercase`
- * Functions which modify the environment or their parameters should be suffixed with a `!` bang letter.
- * Functions which return either `T` or `NIL` should be suffixed wit a `?` questionmark letter.
+ * Functions which modify the environment or their parameters should be suffixed with a `!` bang.
+ * Functions which return either `T` or `NIL` should be suffixed with a `?` question mark.
  * Pairs are constructed using the `.` dot, e.g. `(X . Y)`
  * Lists are created by default unless the `.` dot is used, e.g. `(X Y Z)` is equivalent to `(X . (Y . (Z . NIL)))`
 
@@ -15,16 +46,16 @@ The Tiny Lisp interpreter is written in Digital Mars D and supports a small but 
 
 ## Builtin Functions
 
-### `(env)`
+#### `(env)`
 
-Returns the environment object, an associative list of pairs containing the key and value.
+Returns the environment object, an associative list of pairs containing the key and value. The initial environment is populated with the interpreters built-in functions and the `T` symbol.
 
 ```
 > (env)
-= ((env! . <logic?>) (set! . <logic?>) ...)
+= ((env! . (fun X ...)) (set! . (fun (SYM VAL) ...)) ... (T . T))
 ```
 
-### `(if (X $THEN $ELSE) ...)`
+#### `(if (X $THEN $ELSE) ...)`
 
 The `if` function uses both immediate and lazy evaluation to check if the first argument is non-`NIL` and then evaluates and returns either then `$THEN` or `$ELSE` expressions.
 
@@ -42,14 +73,14 @@ The `if` function uses both immediate and lazy evaluation to check if the first 
 = NAY
 ```
 
-### `(fun ($ARGS $CODE) ...)`
+#### `(fun ($ARGS $CODE) ...)`
 
 Creates a function which will have its own scope when evaluated, control over argument evaluation is expressed in the arguments list, arguments can be evaluated or passed verbatim and be expanded into variables or accessible as a list.
 
   * $ARGS - Verbatim, variable length
   * ARGS - Evaluated, variable length
-  * (A, B) - Expanded, both A and B evaluated
-  * ($A, B) - Expanded, only B is evaluated
+  * (A B) - Expanded, both A and B evaluated
+  * ($A B) - Expanded, only B is evaluated
 
 ```
 > (set! derp (fun $ARGS $ARGS))
@@ -71,7 +102,7 @@ Whereas if the arguments are evaluated by omitting the dollar symbol then symbol
 = (NIL 2 NIL)
 ```
 
-### `(begin EXPR ...)`
+#### `(begin EXPR ...)`
 
 Evaluates a list of expressions and returns the result of the last expression.
 
@@ -82,7 +113,7 @@ Evaluates a list of expressions and returns the result of the last expression.
 = T
 ```
 
-### `(cons (X Y) ...)`
+#### `(cons (X Y) ...)`
 
 Creates a pair with the first and second argument, arguments are evaluated when calling.
 
@@ -95,11 +126,11 @@ Creates a pair with the first and second argument, arguments are evaluated when 
 = (A . B)
 ```
 
-### `(quote (X) ...)`
+#### `(quote (X) ...)`
 
 The argument is evaluated and then converted to a quoted expression which will pass through an evaluation stage.
 
-### `(car (X) ...)`
+#### `(car (X) ...)`
 
 Returns the A record of a pair.
 
@@ -108,7 +139,7 @@ Returns the A record of a pair.
 = X
 ```
 
-### `(cdr (X) ...)`
+#### `(cdr (X) ...)`
 
 Returns the B record of a pair.
 
@@ -117,18 +148,20 @@ Returns the B record of a pair.
 = Y
 ```
 
-### `(env! NEWENV)`
+#### `(env! NEW-ENV)`
 
 Change the environment of the scope to a new value, the environment is an associative list of symbols and their values, the interpreter uses the environment to resolve symbols to their values.
 
 ```
+> (env)
+= (... (T . T))
 > (env! (cons (cons 'X 'Y) (env)))
-= ((X . Y) (T . T) ...)
+= ((X . Y) ... (T . T))
 ```
 
 If the environment is overwritten with `NIL` or otherwise doesn't follow the necessary pair list convention then it will be impossible to evaluate further expressions as internal symbol resolution will be broken.
 
-### `(set! (SYM VAL) ...)`
+#### `(set! (SYM VAL) ...)`
 
 Change the value a variable in the environment, if the variable doesn't exist it is created.
 
@@ -151,7 +184,7 @@ Change the value a variable in the environment, if the variable doesn't exist it
 
 While the `set!` function is builtin it is possible to implement it as a user defined function as the environment can be modified by the `env` and `env!` functions.
 
-### `(def! (SYM VAL) ...)`
+#### `(def! (SYM VAL) ...)`
 
 Define a new symbol by adding it to the environment, a new pair will always be added to the environment, use `set!` to overwrite an existing symbol.
 
@@ -170,19 +203,19 @@ Define a new symbol by adding it to the environment, a new pair will always be a
 > T
 ```
 
-### `(cdr! (X Y) ...)`
+#### `(cdr! (X Y) ...)`
 
 Change the B record of a cons to a new value.
 
-### `(car! (X Y) ...)`
+#### `(car! (X Y) ...)`
 
 Change the B record of a cons to a new value.
 
-### `(fun? (X) ...)`
+#### `(fun? (X) ...)`
 
 Is the argument a function which can be used in the left hand side of an expression?
 
-### `(sym? (X) ...)`
+#### `(sym? (X) ...)`
 
 Is the first argument a symbol:
 
@@ -193,7 +226,7 @@ Is the first argument a symbol:
 = T
 ```
 
-### `(quote? (X) ...)`
+#### `(quote? (X) ...)`
 
 Is the first argument a quoted expression?
 
@@ -208,7 +241,7 @@ Is the first argument a quoted expression?
 = T
 ```
 
-### `(cons? (X) ...)`
+#### `(cons? (X) ...)`
 
 Return `T` if the argument is a CONS.
 
@@ -217,7 +250,7 @@ Return `T` if the argument is a CONS.
 = T
 ```
 
-### `(eq (A B) ...)`
+#### `(eq (A B) ...)`
 
 ```
 > (eq T T)

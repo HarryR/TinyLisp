@@ -26,7 +26,7 @@ import std.outbuffer: OutBuffer;
 import core.sys.posix.unistd: isatty;
 
 private enum Type {
-	SYM, CONS, LOGIC, PROC, QUOTE
+	SYM, CONS, FUN, QUOTE
 }
 
 class Obj {
@@ -74,8 +74,8 @@ private class Obj_Cons : Obj {
 	override Obj eval (ref Obj env) pure @safe nothrow {
 		if( A is null ) return null;
 		auto arg = A.eval(env);
-		if( isPROC(arg) )  {
-			return (cast(Obj_Logic)arg)(env, B);
+		if( isFUN(arg) )  {
+			return (cast(Obj_Fun)arg)(env, B);
 		}
 		return null;
 	}
@@ -117,38 +117,25 @@ private class Obj_Quote : Obj {
 }
 
 public alias Logic_EnvArg = Obj function(ref Obj env, Obj args) pure @safe nothrow;
-private class Obj_Logic : Obj {
-	abstract Obj opCall(ref Obj env, Obj args) pure @safe nothrow;
-	override Type type () const pure nothrow @safe {
-		return Type.LOGIC;
-	}
-	override Obj eval (ref Obj env) pure @safe nothrow {
-		return this;
-	}
-	override string toString () pure @safe nothrow {
-		return "<logic?>";
-	}
-}
-
-private class Obj_Builtin : Obj_Logic {
-	immutable Logic_EnvArg func;
-	this( immutable Logic_EnvArg builtin) pure @safe nothrow {
-		this.func = builtin;
-	}
-	override Obj opCall(ref Obj env, Obj args) pure @safe nothrow {
-		return this.func(env, args);
-	}	
-}
-
-private class Obj_Proc : Obj_Logic {
+private class Obj_Fun : Obj {
 	Obj proc_code;
 	Obj proc_args;
+	Logic_EnvArg func;
+	this( Logic_EnvArg builtin, Obj args) pure @safe nothrow {
+		this.func = builtin;
+		this.proc_code = null;
+		this.proc_args = args;
+	}
 	this( Obj args, Obj code) pure @safe nothrow {
+		this.func = null;
 		this.proc_code = code;
 		this.proc_args = args;
 	}
 	override Type type () const pure nothrow @safe {
-		return Type.PROC;
+		return Type.FUN;
+	}
+	override Obj eval (ref Obj env) pure @safe nothrow {		
+		return this;
 	}
 	private bool beginsWithDollar(Obj sym) pure @safe nothrow {
 		return isSYM(sym)
@@ -156,8 +143,10 @@ private class Obj_Proc : Obj_Logic {
 			&& symname(sym).length > 0
 			&& symname(sym)[0] == '$';
 	}
-
-	override Obj opCall(ref Obj env, Obj args) pure @safe nothrow {
+	Obj opCall(ref Obj env, Obj args) pure @safe nothrow {
+		if( func !is null ) {
+			return this.func(env, args);
+		}
 		Obj new_env;
 		if( isSYM(proc_args) ) {
 			if( beginsWithDollar(proc_args) ) {
@@ -189,7 +178,10 @@ private class Obj_Proc : Obj_Logic {
 		return .eval(new_env, proc_code);
 	}
 	override string toString () pure @safe nothrow {
-		auto args = proc_args ? proc_args.toString() : "NIL";
+		auto args = proc_args ? proc_args.toString() : "?";
+		if( func !is null ) {
+			return "(fun " ~ args ~ " ...)";
+		}
 		auto code = proc_code ? proc_code.toString() : "NIL";
 		return "(fun " ~ args ~ " " ~ code ~ ")";
 	}
@@ -266,14 +258,14 @@ Obj mksym (string name) pure @safe nothrow {
 	if( name is null || name == "NIL" ) return null;
 	return new Obj_Sym(name);
 }
-Obj mkbuiltin (Logic_EnvArg func) pure @safe nothrow {
-	return new Obj_Builtin(func);
+Obj mkfun (Logic_EnvArg func, Obj args) pure @safe nothrow {
+	return new Obj_Fun(func, args);
 }
 private bool istype( const Obj O, const(Type) T ) pure @safe nothrow {
 	return O !is null && O.type() == T;
 }
-bool isPROC( Obj O ) pure @safe nothrow {
-	return istype(O, Type.LOGIC) || istype(O, Type.PROC);
+bool isFUN( Obj O ) pure @safe nothrow {
+	return istype(O, Type.FUN);
 }
 bool isSYM( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.SYM);
@@ -292,7 +284,7 @@ unittest {
 	assert( mksym(null) is null );
 	assert( symname(null) is null );
 	assert( isCONS(null) == false );
-	assert( isPROC(null) == false );
+	assert( isFUN(null) == false );
 	assert( isSYM(null) == false );
 	Obj A = mksym("A");
 	assert( isSYM(A) );
@@ -307,8 +299,8 @@ unittest {
 /*
  * CONS related functions
  */
-Obj cons(string name, Logic_EnvArg builtin) pure @safe nothrow {
-	return cons(mksym(name), mkbuiltin(builtin));
+Obj cons(string name, Logic_EnvArg builtin, Obj args) pure @safe nothrow {
+	return cons(mksym(name), mkfun(builtin, args));
 }
 Obj cons(Obj A = null, Obj B = null) pure @safe nothrow {
 	return new Obj_Cons(A, B);
@@ -322,23 +314,24 @@ Obj mklist(Obj[] args ...) pure @safe nothrow {
 }
 Obj car(Obj X) pure @safe nothrow {
 	if( isCONS(X) ) return (cast(Obj_Cons)X).A;
-	else if( isPROC(X) ) return (cast(Obj_Proc)X).proc_args;
+	else if( isFUN(X) ) return (cast(Obj_Fun)X).proc_args;
 	return null;
 }
 Obj setcar(Obj X, Obj Y) pure @safe nothrow {
-	if( isCONS(X) ) (cast(Obj_Cons)X).A = Y;
-	else if( isPROC(X) ) (cast(Obj_Proc)X).proc_args = Y;
-	return X;
+	if( isCONS(X) ) return (cast(Obj_Cons)X).A = Y;
+	return null;
 }
 Obj cdr(Obj X) pure @safe nothrow {
 	if( isCONS(X) ) return (cast(Obj_Cons)X).B;
-	else if( isPROC(X) ) return (cast(Obj_Proc)X).proc_code;
+	else if( isFUN(X) ) {
+		auto O = (cast(Obj_Fun)X);
+		return O.func is null ? O.proc_code : X;
+	}
 	return null;
 }
 Obj setcdr(Obj X, Obj Y) pure @safe nothrow {
-	if( isCONS(X) ) (cast(Obj_Cons)X).B = Y;
-	else if( isPROC(X) ) (cast(Obj_Proc)X).proc_code = Y;
-	return X;
+	if( isCONS(X) ) return (cast(Obj_Cons)X).B = Y;
+	return null;
 }
 unittest {
 	assert( cdr(null) is null );
@@ -524,17 +517,17 @@ unittest {
 	assert( evalstr(env, "(quote '1") == "'1" );
 }
 
-Obj builtin_proc(ref Obj env, Obj args) pure @safe nothrow {
+Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
 	auto proc_args = car(args);
 	auto proc_code = car(cdr(args));
 	return (isSYM(proc_args) || isCONS(proc_args))
-		 ? new Obj_Proc(proc_args, proc_code)
+		 ? new Obj_Fun(proc_args, proc_code)
 		 : null;
 }
-Obj builtin_isPROC(ref Obj env, Obj args) pure @safe nothrow {
+Obj builtin_isFUN(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	auto A = car(args);
-	return isPROC(A) ? mksym("T") : null;
+	return isFUN(A) ? mksym("T") : null;
 }
 Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
 	auto cond = eval(env, car(args));
@@ -586,6 +579,9 @@ Obj builtin_setcdr(ref Obj env, Obj args) pure @safe nothrow {
 }
 Obj builtin_setenv(ref Obj env, Obj args) pure @safe nothrow {
 	return env = car(evlis(env, args));
+}
+Obj builtin_env(ref Obj env, Obj args) pure @safe nothrow {
+	return env;
 }
 Obj builtin_setb(ref Obj env, Obj args) pure @safe nothrow {
 	auto key = eval(env, car(args));
@@ -660,26 +656,26 @@ unittest {
 Obj mkenv () pure @safe nothrow {
 	auto T = mksym("T");
 	auto env = mklist(
-		cons("env!", &builtin_setenv),
-		cons("set!", &builtin_setb),
-		cons("def!", &builtin_defb),
-		cons("cdr!", &builtin_setcdr),
-		cons("car!", &builtin_setcar),
+		cons("env!", &builtin_setenv, mksym("NEW-ENV")),
+		cons("set!", &builtin_setb, mklist(mksym("SYM"), mksym("VAL"))),
+		cons("def!", &builtin_defb, mklist(mksym("SYM"), mksym("VAL"))),
+		cons("cdr!", &builtin_setcdr, mklist(mksym("X"), mksym("Y"))),
+		cons("car!", &builtin_setcar, mklist(mksym("X"), mksym("Y"))),
 
-		cons("fun?", &builtin_isPROC),
-		cons("quote?", &builtin_isQUOTE),
-		cons("cons?", &builtin_isCONS),
-		cons("sym?", &builtin_isSYM),
-		cons("eq", &builtin_equal),
+		cons("fun?", &builtin_isFUN, mklist(mksym("X"))),
+		cons("quote?", &builtin_isQUOTE, mklist(mksym("X"))),
+		cons("cons?", &builtin_isCONS, mklist(mksym("X"))),
+		cons("sym?", &builtin_isSYM, mklist(mksym("X"))),
+		cons("eq", &builtin_equal, mklist(mksym("X"), mksym("Y"))),
 
-		cons("env", (ref Obj env, Obj args) { return env; }),
-		cons("if", &builtin_if),
-		cons("fun", &builtin_proc),
-		cons("begin", &builtin_begin),
-		cons("cons", &builtin_cons),
-		cons("quote", &builtin_quote),
-		cons("car", &builtin_car),
-		cons("cdr", &builtin_cdr),
+		cons("env", &builtin_env, null),
+		cons("if", &builtin_if, mklist(mksym("X"), mksym("$TRUE"), mksym("$ELSE"))),
+		cons("fun", &builtin_fun, mklist(mksym("$ARGS"), mksym("$CODE"))),
+		cons("begin", &builtin_begin, mksym("EXPR")),
+		cons("cons", &builtin_cons, mklist(mksym("A"), mksym("B"))),
+		cons("quote", &builtin_quote, mklist(mksym("X"))),
+		cons("car", &builtin_car, mklist(mksym("X"))),
+		cons("cdr", &builtin_cdr, mklist(mksym("X"))),
 
 		cons(T, T)
 	);
@@ -690,7 +686,7 @@ unittest {
 	assert( isCONS(mapfind(env, "env")) );
 	assert( isCONS(mapfind(env, "cdr")) );
 	assert( isSYM(car(mapfind(env, "eq"))) );
-	assert( isPROC(cdr(mapfind(env, "eq"))) );
+	assert( isFUN(cdr(mapfind(env, "eq"))) );
 	assert( null is mapfind(env, "diwehfewi") );	
 }
 
@@ -865,7 +861,7 @@ private int main (string[] args) {
 	// Otherwise evaluate the content of stdin
 	auto content = readWholeStream(stdin);
 	if( content !is null && content.length ) {
-		write(evalstr(env, content));
+		write(evalstr(env, content), "\n");
 	}
 	return 0;
 }
