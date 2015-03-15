@@ -26,7 +26,7 @@ import std.outbuffer: OutBuffer;
 import core.sys.posix.unistd: isatty;
 
 private enum Type {
-	SYM, CONS, FUN, QUOTE
+	SYM, PAIR, FUN, QUOTE
 }
 
 class Obj {
@@ -35,7 +35,7 @@ class Obj {
 	abstract Obj eval (ref Obj env) pure @safe nothrow;
 }
 
-private class Obj_Cons : Obj {
+private class Obj_Pair : Obj {
 	Obj A;
 	Obj B;
 	this( Obj A, Obj B ) pure @safe nothrow {
@@ -43,13 +43,13 @@ private class Obj_Cons : Obj {
 		this.B = B;
 	}
 	override Type type () const pure @safe nothrow {
-		return Type.CONS;
+		return Type.PAIR;
 	}
 	override string toString () pure @safe nothrow {
 		string ret = "(";
 		Obj X = this;
 		auto first = true;
-		while( isCONS(X) ) {
+		while( isPAIR(X) ) {
 			if( first ) {				
 				first = false;
 			}
@@ -74,11 +74,27 @@ private class Obj_Cons : Obj {
 	override Obj eval (ref Obj env) pure @safe nothrow {
 		if( A is null ) return null;
 		auto arg = A.eval(env);
-		if( isFUN(arg) )  {
+		if( isFUN(arg) ) {
 			return (cast(Obj_Fun)arg)(env, B);
 		}
 		return null;
 	}
+}
+unittest {
+	assert( mklist(mksym("A")).toString() == "(A)" );
+	assert( cons(mksym("A"), null).toString() == "(A)" );
+	assert( mklist(mksym("A"), null).toString() == "(A NIL)" );
+	assert( mklist(mksym("A"), mklist(mksym("B"))).toString() == "(A (B))" );
+	assert( mklist(mksym("A"), mkquote(mklist(mksym("B")))).toString() == "(A '(B))" );
+	assert( mklist(mksym("A"), mksym("B"), mksym("C")).toString() == "(A B C)" );
+	assert( mklist(null).toString() == "(NIL)" );
+
+	auto env = mkenv();
+	assert( cons(mksym("A"), null).eval(env) is null );
+
+	assert( eval(env, "(car (fun X Y))") == "X" );
+	assert( eval(env, "(cdr (fun X Y))") == "Y" );
+	assert( eval(env, "(cdr if)") == eval(env, "if") );
 }
 
 private class Obj_Sym : Obj {
@@ -92,7 +108,7 @@ private class Obj_Sym : Obj {
 	override string toString () pure @safe nothrow {
 		return name;
 	}
-	override Obj eval (ref Obj env) pure @safe nothrow {		
+	override Obj eval (ref Obj env) pure @safe nothrow {
 		return cdr(mapfind(env, this));
 	}
 }
@@ -134,7 +150,7 @@ private class Obj_Fun : Obj {
 	override Type type () const pure nothrow @safe {
 		return Type.FUN;
 	}
-	override Obj eval (ref Obj env) pure @safe nothrow {		
+	override Obj eval (ref Obj env) pure @safe nothrow {
 		return this;
 	}
 	private bool beginsWithDollar(Obj sym) pure @safe nothrow {
@@ -159,7 +175,7 @@ private class Obj_Fun : Obj {
 		else {
 			auto tmp = proc_args;
 			new_env = env;
-			while( isCONS(tmp) ) {
+			while( isPAIR(tmp) ) {
 				auto key = car(tmp);
 				auto val = car(args);
 				if( isSYM(key) ) {
@@ -186,6 +202,39 @@ private class Obj_Fun : Obj {
 		return "(fun " ~ args ~ " " ~ code ~ ")";
 	}
 }
+unittest {
+	auto testfun = mkfun(&builtin_if, mksym("X"));
+	assert( mkfun(null, mksym("X")).toString() == "(fun X NIL)" );
+	assert( testfun.toString() == "(fun X ...)" );
+
+	auto env = mkenv();
+	assert( equal(testfun.eval(env), testfun) );
+	assert( eval(env, "(def! 'X1 (fun X X))") == "(fun X X)" );
+	assert( eval(env, "(X1)") == "NIL" );
+	assert( eval(env, "(X1 'Y)") == "(Y)" );
+	assert( eval(env, "(X1 'Y 'Z)") == "(Y Z)" );
+	assert( eval(env, "(X1 Y Z)") == "(NIL NIL)" );
+
+	assert( eval(env, "(def! 'X2 (fun $X $X))") == "(fun $X $X)" );
+	assert( eval(env, "(X2)") == "NIL" );
+	assert( eval(env, "(X2 'Y)") == "('Y)" );
+	assert( eval(env, "(X2 'Y 'Z)") == "('Y 'Z)" );
+	assert( eval(env, "(X2 Y Z)") == "(Y Z)" );
+
+	assert( eval(env, "(def! 'X3 (fun (A B) B))") == "(fun (A B) B)" );
+	assert( eval(env, "(X3)") == "NIL" );
+	assert( eval(env, "(X3 'Y)") == "NIL" );
+	assert( eval(env, "(X3 'Y 'Z)") == "Z" );
+	assert( eval(env, "(X3 Y Z)") == "NIL" );
+
+	assert( eval(env, "(def! 'X4 (fun (A $B) $B))") == "(fun (A $B) $B)" );
+	assert( eval(env, "(X4)") == "NIL" );
+	assert( eval(env, "(X4 'Y)") == "NIL" );
+	assert( eval(env, "(X4 'Y 'Z)") == "'Z" );
+	assert( eval(env, "(X4 Y Z)") == "Z" );
+
+	assert( eval(env, "(fun 'X X)") == "NIL" );
+}
 
 
 /**
@@ -201,11 +250,20 @@ bool equal (Obj X, Obj Y) pure @safe nothrow {
 	else if( isSYM(X) && isSYM(Y) ) {
 		return symname(X) == symname(Y);
 	}
-	else if( isCONS(X) && isCONS(Y) ) {
+	else if( isPAIR(X) && isPAIR(Y) ) {
 		return equal(car(X), car(Y)) && equal(cdr(X), cdr(Y));
 	}
-	// Others are checked by their unique type only
-	return X.type() == Y.type();
+	else if( isQUOTE(X) && isQUOTE(Y) ) {
+		return equal((cast(Obj_Quote)X).inside, (cast(Obj_Quote)Y).inside);
+	}
+	else if( isFUN(X) && isFUN(Y) ) {
+		auto funX = cast(Obj_Fun)X;
+		auto funY = cast(Obj_Fun)Y;
+		return equal(funX.proc_code, funY.proc_code)
+			&& equal(funX.proc_args, funY.proc_args)
+			&& funX.func is funY.func;
+	}
+	assert(0); return false;
 }
 unittest {
 	assert( equal(null, null) );
@@ -273,8 +331,8 @@ bool isSYM( const Obj O ) pure @safe nothrow {
 bool isQUOTE( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.QUOTE);
 }
-bool isCONS( const Obj O ) pure @safe nothrow {
-	return istype(O, Type.CONS);
+bool isPAIR( const Obj O ) pure @safe nothrow {
+	return istype(O, Type.PAIR);
 }
 string symname( const Obj O ) pure @safe nothrow {
 	return isSYM(O) ? (cast(const(Obj_Sym))O).name : null;
@@ -283,12 +341,12 @@ unittest {
 	assert( mksym("NIL") is null );
 	assert( mksym(null) is null );
 	assert( symname(null) is null );
-	assert( isCONS(null) == false );
+	assert( isPAIR(null) == false );
 	assert( isFUN(null) == false );
 	assert( isSYM(null) == false );
 	Obj A = mksym("A");
 	assert( isSYM(A) );
-	assert( ! isCONS(A) );
+	assert( ! isPAIR(A) );
 	assert( symname(A) == symname(A) );
 	assert( symname(A) !is null );
 	assert( equal(A, A) );
@@ -303,7 +361,7 @@ Obj cons(string name, Logic_EnvArg builtin, Obj args) pure @safe nothrow {
 	return cons(mksym(name), mkfun(builtin, args));
 }
 Obj cons(Obj A = null, Obj B = null) pure @safe nothrow {
-	return new Obj_Cons(A, B);
+	return new Obj_Pair(A, B);
 }
 Obj mklist(Obj[] args ...) pure @safe nothrow {
 	Obj ret = null;
@@ -313,16 +371,17 @@ Obj mklist(Obj[] args ...) pure @safe nothrow {
 	return ret;
 }
 Obj car(Obj X) pure @safe nothrow {
-	if( isCONS(X) ) return (cast(Obj_Cons)X).A;
+	if( isPAIR(X) ) return (cast(Obj_Pair)X).A;
 	else if( isFUN(X) ) return (cast(Obj_Fun)X).proc_args;
 	return null;
 }
 Obj setcar(Obj X, Obj Y) pure @safe nothrow {
-	if( isCONS(X) ) return (cast(Obj_Cons)X).A = Y;
-	return null;
+	Obj old = car(X);
+	if( isPAIR(X) ) (cast(Obj_Pair)X).A = Y;
+	return old;
 }
 Obj cdr(Obj X) pure @safe nothrow {
-	if( isCONS(X) ) return (cast(Obj_Cons)X).B;
+	if( isPAIR(X) ) return (cast(Obj_Pair)X).B;
 	else if( isFUN(X) ) {
 		auto O = (cast(Obj_Fun)X);
 		return O.func is null ? O.proc_code : X;
@@ -330,8 +389,9 @@ Obj cdr(Obj X) pure @safe nothrow {
 	return null;
 }
 Obj setcdr(Obj X, Obj Y) pure @safe nothrow {
-	if( isCONS(X) ) return (cast(Obj_Cons)X).B = Y;
-	return null;
+	Obj old = cdr(X);
+	if( isPAIR(X) ) (cast(Obj_Pair)X).B = Y;
+	return old;
 }
 unittest {
 	assert( cdr(null) is null );
@@ -343,21 +403,20 @@ unittest {
 	auto B = mksym("B");
 
 	auto X = cons(A, A);
-	assert( isCONS(X) );
+	assert( isPAIR(X) );
 	assert( equal(car(X), cdr(X)) );
 
 	auto Y = setcdr(X, B);
-	assert( isCONS(Y) );
-	assert( equal(car(X), car(Y)) );
-	assert( isSYM(cdr(X)) && isSYM(cdr(Y)) );
-	assert( equal(cdr(X), cdr(Y)) );
-	assert( equal(cdr(Y), B) );
+	assert( isSYM(Y) );
+	assert( equal(Y, A) );
+	assert( equal(cdr(X), B) );
+	assert( equal(car(X), A) );
 
 	auto Z = setcar(X, B);
-	assert( isCONS(Z) );
+	assert( isSYM(Z) );
+	assert( equal(Z, A) );
+	assert( equal(cdr(X), B) );
 	assert( equal(car(X), B) );
-	assert( equal(car(Y), B) );
-	assert( equal(car(Z), B) );
 }
 
 
@@ -366,9 +425,9 @@ unittest {
  * Associative list functions
  */
 Obj mapfind (Obj X, Obj Y) pure @safe nothrow {
-	while( isCONS(X) ) {
+	while( isPAIR(X) ) {
 		auto entry = car(X);
-		if( isCONS(entry) ) {
+		if( isPAIR(entry) ) {
 			if( equal(car(entry), Y) ) {
 				return entry;
 			}
@@ -380,30 +439,6 @@ Obj mapfind (Obj X, Obj Y) pure @safe nothrow {
 Obj mapfind (Obj X, string Y) pure @safe nothrow {
 	return mapfind(X, mksym(Y));
 }
-Obj mapdel (Obj X, Obj Y) pure @safe nothrow {
-	Obj original = X;
-	Obj prev = null;	
-	while( isCONS(X) ) {
-		auto entry = car(X);
-		if( isCONS(entry) ) {
-			if( equal(car(entry), Y) ) {
-				if( prev is null ) {
-					original = cdr(X);
-				}
-				else {
-					setcdr(prev, cdr(X));
-				}
-				break;
-			}
-		}
-		prev = X;
-		X = cdr(X);
-	}
-	return original;	
-}
-Obj mapdel (Obj X, string name) pure @safe nothrow {
-	return mapdel(X, mksym(name));
-}
 Obj mapadd (Obj X, Obj key, Obj val) pure @safe nothrow {
 	return cons(cons(key, val), X);
 }
@@ -411,20 +446,16 @@ unittest {
 	auto A = mksym("A");
 	auto B = mksym("B");
 	auto x1 = mapadd(null, A, B);
-	assert( isCONS(x1) );
-	assert( isCONS(car(x1)) );
+	assert( isPAIR(x1) );
+	assert( isPAIR(car(x1)) );
 	assert( isSYM(car(car(x1))) );
 	assert( isSYM(cdr(car(x1))) );
 	assert( cdr(x1) is null );
 
 	assert( mapfind(x1, B) is null );
 	auto xe = mapfind(x1, A);
-	assert( isCONS(xe) );
+	assert( isPAIR(xe) );
 	assert( equal(car(xe), A) );
-
-	auto x2 = mapdel(x1, A);
-	assert( x2 is null );
-	assert( mapfind(x2, A) is null );
 }
 
 
@@ -436,11 +467,8 @@ private Obj builtin_equal (ref Obj env, Obj args) pure @safe nothrow {
 	Obj prev = null;
 	bool first = true;
 	bool compared = false;
-	while( isCONS(args) ) {
+	while( isPAIR(args) ) {
 		auto A = eval(env,car(args));
-		if( A is null ) {
-			return null;
-		}
 		if( first ) {
 			first = false;
 		}
@@ -457,36 +485,38 @@ private Obj builtin_equal (ref Obj env, Obj args) pure @safe nothrow {
 }
 unittest {
 	Obj env = mkenv();
-	assert( evalstr(env, "(eq 'T 'T)") == "T" );
-	assert( evalstr(env, "(eq T T)") == "T" );
+	assert( eval(env, "(eq 'T 'T)") == "T" );
+	assert( eval(env, "(eq T T)") == "T" );
 
 	// Null can never be equal to anything
-	assert( evalstr(env, "(eq nil nil)") == "NIL" );
-	assert( evalstr(env, "(eq A A)") == "NIL" );
+	assert( eval(env, "(eq nil nil)") == "T" );
+	assert( eval(env, "(eq A A)") == "T" );
 	assert( null is builtin_equal(env, null) );
 	assert( null is builtin_equal(env, cons()) );
-	assert( null is builtin_equal(env, cons(null, cons())) );
+	assert( null !is builtin_equal(env, cons(null, cons())) );
 
 	auto A = mksym("A");
 	// Without quoting the symbols they'll be resolved
 	assert( null is builtin_equal(env, A) );
 	assert( null is builtin_equal(env, mklist(A)) );
 	assert( null !is builtin_equal(env, mklist(mkquote(A), mkquote(A))) );
-	assert( evalstr(env, "(eq 'A 'A)") == "T" );
-	assert( evalstr(env, "(eq 'A A)") == "NIL" );
+	assert( eval(env, "(eq 'A 'A)") == "T" );
+	assert( eval(env, "(eq 'A A)") == "NIL" );
 
 	auto B = mksym("B");
 	assert( null is builtin_equal(env, mklist(mkquote(A), mkquote(B))) );
 	assert( null !is builtin_equal(env, mklist(mkquote(B), mkquote(B))) );
 
 	// Equality with three symbols
-	assert( null !is builtin_equal(env, mklist(mkquote(A), mkquote(A), mkquote(A))) );
-	assert( null is builtin_equal(env, cons(null, cons(null, cons()))) );
-	assert( null is builtin_equal(env, mklist(A, A, null)) );
-	assert( null is builtin_equal(env, mklist(B, A, A)) );
-	assert( evalstr(env, "(eq 'A 'A 'A)") == "T" );
-	assert( evalstr(env, "(eq 'A 'B 'A)") == "NIL" );
-	assert( evalstr(env, "(eq null nil null)") == "NIL" );
+	assert( eval(env, "(eq 'A 'A 'A)") == "T" );
+	assert( eval(env, "(eq 'A 'B 'A)") == "NIL" );
+	assert( eval(env, "(eq null nil null)") == "T" );
+
+	// Equality with quoted types
+	assert( eval(env, "(eq ''A ''A)") == "T" );
+	assert( eval(env, "(eq ''A ''B)") == "NIL" );
+	assert( eval(env, "(eq (quote (cons A)) (quote (cons A)))") == "T" );
+	assert( eval(env, "(eq (quote (cons 'A)) (quote (cons NIL)))") == "NIL" );
 }
 
 Obj builtin_quote(ref Obj env, Obj args) pure @safe nothrow {
@@ -505,22 +535,22 @@ Obj builtin_isSYM(ref Obj env, Obj args) pure @safe nothrow {
 }
 unittest {
 	auto env = mkenv();
-	assert( evalstr(env, "(quote? (quote))") == "T" );
-	assert( evalstr(env, "(quote? (quote 1))") == "T" );
-	assert( evalstr(env, "(sym? 'X)") == "T" );
-	assert( evalstr(env, "(quote? 'X)") == "NIL" );
-	assert( evalstr(env, "(sym? ''X)") == "NIL" );
-	assert( evalstr(env, "(quote? ''X)") == "T" );
-	assert( evalstr(env, "(quote? '''X)") == "T" );
-	assert( evalstr(env, "(quote? 1)") == "NIL" );
-	assert( evalstr(env, "(quote 1") == "'NIL" );
-	assert( evalstr(env, "(quote '1") == "'1" );
+	assert( eval(env, "(quote? (quote))") == "T" );
+	assert( eval(env, "(quote? (quote 1))") == "T" );
+	assert( eval(env, "(sym? 'X)") == "T" );
+	assert( eval(env, "(quote? 'X)") == "NIL" );
+	assert( eval(env, "(sym? ''X)") == "NIL" );
+	assert( eval(env, "(quote? ''X)") == "T" );
+	assert( eval(env, "(quote? '''X)") == "T" );
+	assert( eval(env, "(quote? 1)") == "NIL" );
+	assert( eval(env, "(quote 1") == "'NIL" );
+	assert( eval(env, "(quote '1") == "'1" );
 }
 
 Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
 	auto proc_args = car(args);
 	auto proc_code = car(cdr(args));
-	return (isSYM(proc_args) || isCONS(proc_args))
+	return (isSYM(proc_args) || isPAIR(proc_args))
 		 ? new Obj_Fun(proc_args, proc_code)
 		 : null;
 }
@@ -539,15 +569,15 @@ Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
 }
 unittest {
 	auto env = mkenv();
-	assert( evalstr(env, "(fun? if") == "T" );
-	assert( evalstr(env, "(fun? X") == "NIL" );
-	assert( evalstr(env, "(fun? (fun x x)") == "T" );
-	assert( evalstr(env, "(if T T NIL)") == "T" );
-	assert( evalstr(env, "(if NIL T NIL)") == "NIL" );
-	assert( evalstr(env, "(if T NIL T)") == "NIL" );
-	assert( evalstr(env, "(if (fun? if) NIL T)") == "NIL" );
-	assert( evalstr(env, "(if (fun? if) '1 '2)") == "1" );
-	assert( evalstr(env, "(if (fun? X) '1 '2)") == "2" );
+	assert( eval(env, "(fun? if") == "T" );
+	assert( eval(env, "(fun? X") == "NIL" );
+	assert( eval(env, "(fun? (fun x x)") == "T" );
+	assert( eval(env, "(if T T NIL)") == "T" );
+	assert( eval(env, "(if NIL T NIL)") == "NIL" );
+	assert( eval(env, "(if T NIL T)") == "NIL" );
+	assert( eval(env, "(if (fun? if) NIL T)") == "NIL" );
+	assert( eval(env, "(if (fun? if) '1 '2)") == "1" );
+	assert( eval(env, "(if (fun? X) '1 '2)") == "2" );
 }
 
 Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
@@ -556,10 +586,13 @@ Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
 	auto B = car(cdr(args));
 	return cons(A, B);
 }
-Obj builtin_isCONS(ref Obj env, Obj args) pure @safe nothrow {
+Obj builtin_isPAIR(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	auto A = car(args);
-	return isCONS(A) ? mksym("T") : null;
+	return isPAIR(car(args)) ? mksym("T") : null;
+}
+Obj builtin_isNIL(ref Obj env, Obj args) pure @safe nothrow {
+	args = evlis(env, args);
+	return car(args) is null ? mksym("T") : null;
 }
 Obj builtin_car(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
@@ -583,18 +616,25 @@ Obj builtin_setenv(ref Obj env, Obj args) pure @safe nothrow {
 Obj builtin_env(ref Obj env, Obj args) pure @safe nothrow {
 	return env;
 }
+unittest {
+	auto env = mkenv();
+	assert( eval(env, "(env)") != "NIL" );
+	assert( eval(env, "(pair? (env))") == "T" );
+}
 Obj builtin_setb(ref Obj env, Obj args) pure @safe nothrow {
 	auto key = eval(env, car(args));
 	auto val = eval(env, car(cdr(args)));
 	if( key !is null && isSYM(key) ) {
 		auto entry = mapfind(env, key);
+		Obj old = null;
 		if( entry is null ) {
-			env = mapadd(env, key, val);		
+			env = mapadd(env, key, val);
 		}
 		else {
+			old = cdr(entry);
 			setcdr(entry, val);
 		}
-		return val;
+		return old;
 	}
 	return null;
 }
@@ -609,7 +649,30 @@ Obj builtin_defb(ref Obj env, Obj args) pure @safe nothrow {
 }
 unittest {
 	auto env = mkenv();
+	assert( eval(env, "(def!)") == "NIL" );
+	assert( eval(env, "(set!)") == "NIL" );
+	assert( eval(env, "(set! 'Z T)") == "NIL" );
 
+	assert( eval(env, "(def! 'X T)") == "T" );
+	assert( eval(env, "X") == "T" );
+	assert( eval(env, "(cdr (car (env)))") == "T" );
+
+	// New variable shadows previous
+	assert( eval(env, "(def! 'X NIL)") == "NIL" );
+	assert( eval(env, "X") == "NIL" );
+	assert( eval(env, "(cdr (car (env)))") == "NIL" );
+	assert( eval(env, "(cdr (car (cdr (env))))") == "T" );
+
+	// Ensure that set! overwrites variable
+	assert( eval(env, "(set! 'X 'Y)") == "NIL" );
+	assert( eval(env, "(cdr (car (env)))") == "Y" );
+	assert( eval(env, "(cdr (car (cdr (env))))") == "T" );
+	assert( eval(env, "(set! 'X 'Y)") == "Y" );
+	assert( eval(env, "(cdr (car (cdr (env))))") == "T" );
+}
+
+unittest {
+	auto env = mkenv();
 	auto A = cons(mksym("X"), mksym("Y"));	
 	builtin_setcdr(env, mklist(mkquote(A), mksym("T")));
 	assert( equal(cdr(A), mksym("T")) );
@@ -617,21 +680,26 @@ unittest {
 	builtin_setcar(env, mklist(mkquote(A), mksym("T")));
 	assert( equal(car(A), mksym("T")) );
 
-	evalstr(env, "(def! 'A (cons 'X 'Y))");
-	assert( evalstr(env, "(cons? A)") == "T" );
-	assert( evalstr(env, "(car A)") == "X" );
-	assert( evalstr(env, "(cdr A)") == "Y" );
-	evalstr(env, "(cdr! A T)");
-	assert( evalstr(env, "(cdr A)") == "T" );
-	evalstr(env, "(car! A T)");
-	assert( evalstr(env, "(car A)") == "T" );
+	eval(env, "(def! 'A (cons 'X 'Y))");
+	assert( eval(env, "(pair? A)") == "T" );
+	assert( eval(env, "(car A)") == "X" );
+	assert( eval(env, "(cdr A)") == "Y" );
+	eval(env, "(cdr! A T)");
+	assert( eval(env, "(cdr A)") == "T" );
+	eval(env, "(car! A T)");
+	assert( eval(env, "(car A)") == "T" );
+
+	assert( eval(env, "(nil?)") == "T" );
+	assert( eval(env, "(nil? T)") == "NIL" );
+	assert( eval(env, "(nil? NIL)") == "T" );
 
 	assert( env !is null );
-	assert( evalstr(env, "(env!)") == "NIL" );
+	assert( eval(env, "(env!)") == "NIL" );
 	assert( env is null );
+
 }
 Obj builtin_begin(ref Obj env, Obj args) pure @safe nothrow {
-	while( isCONS(args) ) {
+	while( isPAIR(args) ) {
 		auto exp = car(args);
 		auto next = cdr(args);
 		if( next is null ) {
@@ -644,14 +712,13 @@ Obj builtin_begin(ref Obj env, Obj args) pure @safe nothrow {
 }
 unittest {
 	auto env = mkenv();
-	assert( evalstr(env, "(begin T)") == "T" );
-	assert( evalstr(env, "(begin T NIL)") == "NIL" );
-	assert( evalstr(env, "(begin X)") == "NIL" );
-	assert( evalstr(env, "(begin NIL (eq T T))") == "T" );
-	assert( evalstr(env, "(begin T (eq NIL NIL))") == "NIL" );
+	assert( eval(env, "(begin T)") == "T" );
+	assert( eval(env, "(begin T NIL)") == "NIL" );
+	assert( eval(env, "(begin X)") == "NIL" );
+	assert( eval(env, "(begin NIL (eq T T))") == "T" );
+	assert( eval(env, "(begin X (eq NIL NIL))") == "T" );
+	assert( eval(env, "(begin)") == "NIL" );
 }
-
-
 
 Obj mkenv () pure @safe nothrow {
 	auto T = mksym("T");
@@ -664,7 +731,8 @@ Obj mkenv () pure @safe nothrow {
 
 		cons("fun?", &builtin_isFUN, mklist(mksym("X"))),
 		cons("quote?", &builtin_isQUOTE, mklist(mksym("X"))),
-		cons("cons?", &builtin_isCONS, mklist(mksym("X"))),
+		cons("pair?", &builtin_isPAIR, mklist(mksym("X"))),
+		cons("nil?", &builtin_isNIL, mklist(mksym("X"))),
 		cons("sym?", &builtin_isSYM, mklist(mksym("X"))),
 		cons("eq", &builtin_equal, mklist(mksym("X"), mksym("Y"))),
 
@@ -683,11 +751,11 @@ Obj mkenv () pure @safe nothrow {
 }
 unittest {
 	auto env = mkenv();
-	assert( isCONS(mapfind(env, "env")) );
-	assert( isCONS(mapfind(env, "cdr")) );
+	assert( isPAIR(mapfind(env, "env")) );
+	assert( isPAIR(mapfind(env, "cdr")) );
 	assert( isSYM(car(mapfind(env, "eq"))) );
 	assert( isFUN(cdr(mapfind(env, "eq"))) );
-	assert( null is mapfind(env, "diwehfewi") );	
+	assert( null is mapfind(env, "diwehfewi") );
 }
 
 
@@ -727,7 +795,7 @@ private string parseToken (string str, ref int offs) pure @safe nothrow {
 }
 private Obj parseList (ref Obj env, string str, ref int offs) pure @safe nothrow {
 	auto original = offs;
-	auto token = parseToken(str, offs);		
+	auto token = parseToken(str, offs);
 	if( token is null ) {
 		return null;
 	}
@@ -777,7 +845,7 @@ Obj eval (ref Obj env, Obj X)  pure @safe nothrow {
 	}
 	return null;
 }
-string evalstr (ref Obj env, string X) pure @safe nothrow {
+string eval (ref Obj env, string X) pure @safe nothrow {
 	auto res = eval(env, parse(env, X));
 	if( res is null ) {
 		return "NIL";
@@ -794,7 +862,7 @@ private void repl (ref Obj env ) {
 		if( (line = stdin.readln()) is null ) {
 			break;
 		}
-		write("= ", evalstr(env, line), "\n");	
+		write("= ", eval(env, line), "\n");
 	}
 }
 private string readWholeFile (string filename) {
@@ -861,7 +929,7 @@ private int main (string[] args) {
 	// Otherwise evaluate the content of stdin
 	auto content = readWholeStream(stdin);
 	if( content !is null && content.length ) {
-		write(evalstr(env, content), "\n");
+		write(eval(env, content), "\n");
 	}
 	return 0;
 }

@@ -1,6 +1,6 @@
 # TinyLISP 
 
-The Tiny Lisp interpreter is written in Digital Mars D and supports a small but consistent suite of builtin functions which should be familiar to Lisp and Scheme users, however a distinctive feature is that this Lisp variant doesn't have integers, strings or other non-symbolic data types, it only has symbols and expressions.
+The Tiny Lisp interpreter is written in Digital Mars D and supports a small but consistent suite of builtin functions which should be familiar to Lisp and Scheme users, however a distinctive feature is that this Lisp variant doesn't have integers, strings or other non-symbolic data types, it only has symbols and expressions. The four data types supported are: `SYM`, `PAIR`, `FUN` and `QUOTE`.
 
   * Garbage collection
   * Lazy evaluation
@@ -29,9 +29,8 @@ $ ./lisp
 
 ### Bugs
 
- * `(cdr! (car (env)) (env))` = segfault during `Obj.toString()`
+ * `(cdr! (car (env)) (env))` = segfault during `Obj.toString()` and `equal()` because recursive references aren't taken into consideration.
  * `'((X . Y) '(Z . H))` parses as `((X . Y))`
- * `(ignore (env! (car! (car (env)) (env))))` doesn't change (env)
 
 ## Syntax Conventions
 
@@ -77,10 +76,10 @@ The `if` function uses both immediate and lazy evaluation to check if the first 
 
 Creates a function which will have its own scope when evaluated, control over argument evaluation is expressed in the arguments list, arguments can be evaluated or passed verbatim and be expanded into variables or accessible as a list.
 
-  * $ARGS - Verbatim, variable length
-  * ARGS - Evaluated, variable length
-  * (A B) - Expanded, both A and B evaluated
-  * ($A B) - Expanded, only B is evaluated
+  * `$ARGS` - Verbatim, variable length
+  * `ARGS` - Evaluated, variable length
+  * `(A B)` - Expanded, both A and B evaluated
+  * `($A B)` - Expanded, only B is evaluated
 
 ```
 > (set! derp (fun $ARGS $ARGS))
@@ -132,19 +131,25 @@ The argument is evaluated and then converted to a quoted expression which will p
 
 #### `(car (X) ...)`
 
-Returns the A record of a pair.
+Returns the A record of a pair. If `X` is a function it will return the arguments object. Combined with `(cdr)` this allows for introspection, manipulation and refection at the function level
 
 ```
 > (car (cons 'X 'Y))
 = X
+> (car if)
+= (X $TRUE $ELSE)
 ```
 
 #### `(cdr (X) ...)`
 
-Returns the B record of a pair.
+Returns the B record of a pair. If `X` is a function it will return the code object if it's a user defined function, for native built-in functions the same function will be returned.
 
 ```
 > (cdr (cons 'X 'Y))
+= Y
+> (cdr if)
+= (fun (X $TRUE $ELSE) ...)
+> (cdr (fun X Y))
 = Y
 ```
 
@@ -205,11 +210,11 @@ Define a new symbol by adding it to the environment, a new pair will always be a
 
 #### `(cdr! (X Y) ...)`
 
-Change the B record of a cons to a new value.
+Change the B record of a cons to a new value, returns the old value.
 
 #### `(car! (X Y) ...)`
 
-Change the B record of a cons to a new value.
+Change the B record of a cons to a new value, returns the old value.
 
 #### `(fun? (X) ...)`
 
@@ -241,12 +246,23 @@ Is the first argument a quoted expression?
 = T
 ```
 
-#### `(cons? (X) ...)`
+#### `(pair? (X) ...)`
 
-Return `T` if the argument is a CONS.
+Return `T` if the argument is a pair.
 
 ```
-> (cons? (cons))
+> (pair? (cons))
+= T
+```
+
+#### `(nil? (X) ...)`
+
+Return `T` if the argument is NIL.
+
+```
+> (nil? (cons))
+= NIL
+> (nil? NIL)
 = T
 ```
 

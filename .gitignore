@@ -1,4 +1,5 @@
 *.o
 *.lst
+*.cov
+*.test
 lisp
-lisp.test
