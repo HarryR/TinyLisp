@@ -263,7 +263,7 @@ bool equal (Obj X, Obj Y) pure @safe nothrow {
 			&& equal(funX.proc_args, funY.proc_args)
 			&& funX.func is funY.func;
 	}
-	assert(0); return false;
+	return false; // Will never reach here!
 }
 unittest {
 	assert( equal(null, null) );
@@ -348,6 +348,7 @@ unittest {
 	assert( isSYM(A) );
 	assert( ! isPAIR(A) );
 	assert( symname(A) == symname(A) );
+	assert( symname(A) == "A" );
 	assert( symname(A) !is null );
 	assert( equal(A, A) );
 }
@@ -485,12 +486,12 @@ private Obj builtin_equal (ref Obj env, Obj args) pure @safe nothrow {
 }
 unittest {
 	Obj env = mkenv();
-	assert( eval(env, "(eq 'T 'T)") == "T" );
-	assert( eval(env, "(eq T T)") == "T" );
+	assert( eval(env, "(eq? 'T 'T)") == "T" );
+	assert( eval(env, "(eq? T T)") == "T" );
 
 	// Null can never be equal to anything
-	assert( eval(env, "(eq nil nil)") == "T" );
-	assert( eval(env, "(eq A A)") == "T" );
+	assert( eval(env, "(eq? nil nil)") == "T" );
+	assert( eval(env, "(eq? A A)") == "T" );
 	assert( null is builtin_equal(env, null) );
 	assert( null is builtin_equal(env, cons()) );
 	assert( null !is builtin_equal(env, cons(null, cons())) );
@@ -500,23 +501,23 @@ unittest {
 	assert( null is builtin_equal(env, A) );
 	assert( null is builtin_equal(env, mklist(A)) );
 	assert( null !is builtin_equal(env, mklist(mkquote(A), mkquote(A))) );
-	assert( eval(env, "(eq 'A 'A)") == "T" );
-	assert( eval(env, "(eq 'A A)") == "NIL" );
+	assert( eval(env, "(eq? 'A 'A)") == "T" );
+	assert( eval(env, "(eq? 'A A)") == "NIL" );
 
 	auto B = mksym("B");
 	assert( null is builtin_equal(env, mklist(mkquote(A), mkquote(B))) );
 	assert( null !is builtin_equal(env, mklist(mkquote(B), mkquote(B))) );
 
 	// Equality with three symbols
-	assert( eval(env, "(eq 'A 'A 'A)") == "T" );
-	assert( eval(env, "(eq 'A 'B 'A)") == "NIL" );
-	assert( eval(env, "(eq null nil null)") == "T" );
+	assert( eval(env, "(eq? 'A 'A 'A)") == "T" );
+	assert( eval(env, "(eq? 'A 'B 'A)") == "NIL" );
+	assert( eval(env, "(eq? null nil null)") == "T" );
 
 	// Equality with quoted types
-	assert( eval(env, "(eq ''A ''A)") == "T" );
-	assert( eval(env, "(eq ''A ''B)") == "NIL" );
-	assert( eval(env, "(eq (quote (cons A)) (quote (cons A)))") == "T" );
-	assert( eval(env, "(eq (quote (cons 'A)) (quote (cons NIL)))") == "NIL" );
+	assert( eval(env, "(eq? ''A ''A)") == "T" );
+	assert( eval(env, "(eq? ''A ''B)") == "NIL" );
+	assert( eval(env, "(eq? (quote (cons A)) (quote (cons A)))") == "T" );
+	assert( eval(env, "(eq? (quote (cons 'A)) (quote (cons NIL)))") == "NIL" );
 }
 
 Obj builtin_quote(ref Obj env, Obj args) pure @safe nothrow {
@@ -543,8 +544,8 @@ unittest {
 	assert( eval(env, "(quote? ''X)") == "T" );
 	assert( eval(env, "(quote? '''X)") == "T" );
 	assert( eval(env, "(quote? 1)") == "NIL" );
-	assert( eval(env, "(quote 1") == "'NIL" );
-	assert( eval(env, "(quote '1") == "'1" );
+	assert( eval(env, "(quote 1)") == "'NIL" );
+	assert( eval(env, "(quote '1)") == "'1" );
 }
 
 Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
@@ -569,9 +570,9 @@ Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
 }
 unittest {
 	auto env = mkenv();
-	assert( eval(env, "(fun? if") == "T" );
-	assert( eval(env, "(fun? X") == "NIL" );
-	assert( eval(env, "(fun? (fun x x)") == "T" );
+	assert( eval(env, "(fun? if)") == "T" );
+	assert( eval(env, "(fun? X)") == "NIL" );
+	assert( eval(env, "(fun? (fun x x))") == "T" );
 	assert( eval(env, "(if T T NIL)") == "T" );
 	assert( eval(env, "(if NIL T NIL)") == "NIL" );
 	assert( eval(env, "(if T NIL T)") == "NIL" );
@@ -580,12 +581,6 @@ unittest {
 	assert( eval(env, "(if (fun? X) '1 '2)") == "2" );
 }
 
-Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
-	args = evlis(env, args);
-	auto A = car(args);
-	auto B = car(cdr(args));
-	return cons(A, B);
-}
 Obj builtin_isPAIR(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return isPAIR(car(args)) ? mksym("T") : null;
@@ -593,6 +588,23 @@ Obj builtin_isPAIR(ref Obj env, Obj args) pure @safe nothrow {
 Obj builtin_isNIL(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return car(args) is null ? mksym("T") : null;
+}
+unittest {
+	auto env = mkenv();
+	assert( eval(env, "(nil?)") == "T" );
+	assert( eval(env, "(nil? T)") == "NIL" );
+	assert( eval(env, "(nil? NIL)") == "T" );
+
+	assert( eval(env, "(pair? (cons 'A 'B))") == "T" );
+	assert( eval(env, "(pair? T)") == "NIL" );
+	assert( eval(env, "(pair?)") == "NIL" );
+}
+
+Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
+	args = evlis(env, args);
+	auto A = car(args);
+	auto B = car(cdr(args));
+	return cons(A, B);
 }
 Obj builtin_car(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
@@ -610,6 +622,25 @@ Obj builtin_setcdr(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return setcdr(car(args), car(cdr(args)));
 }
+unittest {
+	auto env = mkenv();
+	auto A = cons(mksym("X"), mksym("Y"));
+	builtin_setcdr(env, mklist(mkquote(A), mksym("T")));
+	assert( equal(cdr(A), mksym("T")) );
+	assert( equal(car(A), mksym("X")) );
+	builtin_setcar(env, mklist(mkquote(A), mksym("T")));
+	assert( equal(car(A), mksym("T")) );
+
+	eval(env, "(def! 'A (cons 'X 'Y))");
+	assert( eval(env, "(pair? A)") == "T" );
+	assert( eval(env, "(car A)") == "X" );
+	assert( eval(env, "(cdr A)") == "Y" );
+	eval(env, "(cdr! A T)");
+	assert( eval(env, "(cdr A)") == "T" );
+	eval(env, "(car! A T)");
+	assert( eval(env, "(car A)") == "T" );
+}
+
 Obj builtin_setenv(ref Obj env, Obj args) pure @safe nothrow {
 	return env = car(evlis(env, args));
 }
@@ -620,6 +651,10 @@ unittest {
 	auto env = mkenv();
 	assert( eval(env, "(env)") != "NIL" );
 	assert( eval(env, "(pair? (env))") == "T" );
+
+	assert( env !is null );
+	assert( eval(env, "(env!)") == "NIL" );
+	assert( env is null );
 }
 Obj builtin_setb(ref Obj env, Obj args) pure @safe nothrow {
 	auto key = eval(env, car(args));
@@ -656,13 +691,11 @@ unittest {
 	assert( eval(env, "(def! 'X T)") == "T" );
 	assert( eval(env, "X") == "T" );
 	assert( eval(env, "(cdr (car (env)))") == "T" );
-
 	// New variable shadows previous
 	assert( eval(env, "(def! 'X NIL)") == "NIL" );
 	assert( eval(env, "X") == "NIL" );
 	assert( eval(env, "(cdr (car (env)))") == "NIL" );
 	assert( eval(env, "(cdr (car (cdr (env))))") == "T" );
-
 	// Ensure that set! overwrites variable
 	assert( eval(env, "(set! 'X 'Y)") == "NIL" );
 	assert( eval(env, "(cdr (car (env)))") == "Y" );
@@ -671,33 +704,6 @@ unittest {
 	assert( eval(env, "(cdr (car (cdr (env))))") == "T" );
 }
 
-unittest {
-	auto env = mkenv();
-	auto A = cons(mksym("X"), mksym("Y"));	
-	builtin_setcdr(env, mklist(mkquote(A), mksym("T")));
-	assert( equal(cdr(A), mksym("T")) );
-	assert( equal(car(A), mksym("X")) );
-	builtin_setcar(env, mklist(mkquote(A), mksym("T")));
-	assert( equal(car(A), mksym("T")) );
-
-	eval(env, "(def! 'A (cons 'X 'Y))");
-	assert( eval(env, "(pair? A)") == "T" );
-	assert( eval(env, "(car A)") == "X" );
-	assert( eval(env, "(cdr A)") == "Y" );
-	eval(env, "(cdr! A T)");
-	assert( eval(env, "(cdr A)") == "T" );
-	eval(env, "(car! A T)");
-	assert( eval(env, "(car A)") == "T" );
-
-	assert( eval(env, "(nil?)") == "T" );
-	assert( eval(env, "(nil? T)") == "NIL" );
-	assert( eval(env, "(nil? NIL)") == "T" );
-
-	assert( env !is null );
-	assert( eval(env, "(env!)") == "NIL" );
-	assert( env is null );
-
-}
 Obj builtin_begin(ref Obj env, Obj args) pure @safe nothrow {
 	while( isPAIR(args) ) {
 		auto exp = car(args);
@@ -715,14 +721,16 @@ unittest {
 	assert( eval(env, "(begin T)") == "T" );
 	assert( eval(env, "(begin T NIL)") == "NIL" );
 	assert( eval(env, "(begin X)") == "NIL" );
-	assert( eval(env, "(begin NIL (eq T T))") == "T" );
-	assert( eval(env, "(begin X (eq NIL NIL))") == "T" );
+	assert( eval(env, "(begin NIL (eq? T T))") == "T" );
+	assert( eval(env, "(begin X (eq? NIL NIL))") == "T" );
 	assert( eval(env, "(begin)") == "NIL" );
 }
 
 Obj mkenv () pure @safe nothrow {
 	auto T = mksym("T");
 	auto env = mklist(
+		cons(T, T),
+
 		cons("env!", &builtin_setenv, mksym("NEW-ENV")),
 		cons("set!", &builtin_setb, mklist(mksym("SYM"), mksym("VAL"))),
 		cons("def!", &builtin_defb, mklist(mksym("SYM"), mksym("VAL"))),
@@ -734,7 +742,7 @@ Obj mkenv () pure @safe nothrow {
 		cons("pair?", &builtin_isPAIR, mklist(mksym("X"))),
 		cons("nil?", &builtin_isNIL, mklist(mksym("X"))),
 		cons("sym?", &builtin_isSYM, mklist(mksym("X"))),
-		cons("eq", &builtin_equal, mklist(mksym("X"), mksym("Y"))),
+		cons("eq?", &builtin_equal, mklist(mksym("X"), mksym("Y"))),
 
 		cons("env", &builtin_env, null),
 		cons("if", &builtin_if, mklist(mksym("X"), mksym("$TRUE"), mksym("$ELSE"))),
@@ -744,8 +752,6 @@ Obj mkenv () pure @safe nothrow {
 		cons("quote", &builtin_quote, mklist(mksym("X"))),
 		cons("car", &builtin_car, mklist(mksym("X"))),
 		cons("cdr", &builtin_cdr, mklist(mksym("X"))),
-
-		cons(T, T)
 	);
 	return env;
 }
@@ -753,91 +759,151 @@ unittest {
 	auto env = mkenv();
 	assert( isPAIR(mapfind(env, "env")) );
 	assert( isPAIR(mapfind(env, "cdr")) );
-	assert( isSYM(car(mapfind(env, "eq"))) );
-	assert( isFUN(cdr(mapfind(env, "eq"))) );
+	assert( isSYM(car(mapfind(env, "eq?"))) );
+	assert( isFUN(cdr(mapfind(env, "eq?"))) );
+	assert( eval(env, "env") == "(fun ? ...)" );
 	assert( null is mapfind(env, "diwehfewi") );
 }
 
 
-
-private bool iswhite( char ch ) pure @safe nothrow {
-	return ch == '\t' || ch == ' ' || ch == '\r' || ch == '\n';
-}
 private bool isparen( char ch ) pure @safe nothrow {
 	return ch == '(' || ch == ')' || ch == '\'';
 }
-private string parseToken (string str, ref int offs) pure @safe nothrow {
-	while( offs < str.length && isWhite(str[offs]) ) {
-		offs += 1;
-	}
-	if( offs >= str.length ) {
+private bool skipwhite( string str, ref int offs ) pure @safe nothrow {
+	while( offs < str.length && isWhite(str[offs]) ) offs++;
+	return offs < str.length;
+}
+private Obj parseObj(ref Obj env, string str, ref int offs, ref bool ok) pure @safe nothrow {
+	if( ! skipwhite(str, offs) || str[offs] == ')' ) {
+		ok = false;
 		return null;
+	}
+	// Parse a pair or list
+	if( str[offs] == '(' ) {
+		offs++;
+		Obj X = cons();
+		Obj Y = X;
+		bool pair = false;
+		bool first = true;
+		while( true ) {
+			if( ! skipwhite(str, offs) ) {
+				ok = false;
+				return null;
+			}
+			if( str[offs] == ')' ) {	// End of the cons/list
+				if( pair ) {			// Parsing a pair, expecting another element, got ')'					
+					ok = false;
+					return null;
+				}
+				break;
+			}
+			auto A = parseObj(env, str, offs, ok);
+			if( ! ok ) {
+				return null;
+			}
+			if( ! skipwhite(str, offs) ) {
+				ok = false;
+				return null;
+			}
+			if( first ) {
+				if( str[offs] == '.' ) {	// Parsing a pair
+					offs++;
+					pair = true;
+				}
+				setcar(Y, A);
+				first = false;
+			}
+			else {
+				if( pair ) {
+					setcdr(Y, A);
+					break;
+				}
+				else {
+					auto Z = cons(A);	// Extend list
+					setcdr(Y, Z);
+					Y = Z;
+				}
+			}
+		} // while( true )
+		if( ! skipwhite(str, offs) ) {
+			ok = false;
+			return null;
+		}
+		if( offs >= str.length || str[offs] != ')' ) { // List doesn't terminate...
+			ok = false;
+			return null;
+		}
+		offs++;
+		return X;
+	}
+	else if( str[offs] == '\'' ) { // Quoted object
+		offs++;
+		auto X = parseObj(env, str, offs, ok);
+		if( ! ok ) {
+			return null;
+		}
+		return mkquote(X);
 	}
 
 	auto start = offs;
-	if( isparen(str[offs]) ) {
-		offs += 1;
-		return [str[offs - 1]];
+	while( offs < str.length && ! isparen(str[offs]) && ! isWhite(str[offs]) ) {
+		offs++;
 	}
-
-	// Read chars until next whitespace or parenthesis
-	while( offs < str.length ) {
-		if( iswhite(str[offs]) || isparen(str[offs]) ) {
-			break;
-		}
-		offs += 1;
-	}
-
-	if( 0 == (offs - start) ) {
+	if( (offs - start) <= 0 ) {
+		ok = false;
 		return null;
 	}
-	return str[start .. offs];
+	return mksym(str[start .. offs]);
 }
-private Obj parseList (ref Obj env, string str, ref int offs) pure @safe nothrow {
-	auto original = offs;
-	auto token = parseToken(str, offs);
-	if( token is null ) {
-		return null;
-	}
-	if( token == ")" ) {
-		return null;
-	}
-	if( token == "." ) {
-		return parseObj(env, str, offs);
-	}
-	offs = original;
-	auto obj = parseObj(env, str, offs);
-	return cons(obj, parseList(env, str, offs));
-}
-private Obj parseObj (ref Obj env, string str, ref int offs) pure @safe nothrow {
-	auto token = parseToken(str, offs);
-	if( token is null || token == ")" ) {
-		return null;
-	}
-	else if( token == "(" ) {
-		return parseList(env, str, offs);
-	}
-	else if( token == "\'" ) {
-		return mkquote(parseObj(env, str, offs));
-	}	
-	return mksym(token);
-}
-Obj parse (ref Obj env, string str) pure @safe nothrow {
+Obj parse(ref Obj env, string str) pure @safe nothrow {
+	if( str.length < 1 ) return null;
 	int offs = 0;
-	if( str.length < 1 )
-		return null;
-	return parseObj(env, str, offs);
+	bool ok = true;
+	auto ret = parseObj(env, str, offs, ok);
+	if( ok ) {
+		return ret;
+	}
+	return null;
+}
+unittest {
+	auto env = mkenv();
+
+	// Invalid forms
+	assert( parse(env, null) is null );
+	assert( parse(env, "") is null );
+	assert( parse(env, "NIL") is null );
+	assert( parse(env, "'") is null );
+	assert( parse(env, "(") is null );
+	assert( parse(env, ")") is null );
+	assert( parse(env, "(X (Y)") is null );
+
+	auto X = mksym("X");
+	auto Y = mksym("Y");
+	auto Z = mksym("Z");
+	assert( equal(parse(env, "()"), cons()) );
+	assert( equal(parse(env, "X"), mksym("X")) );
+	assert( equal(parse(env, "'X"), mkquote(mksym("X"))) );
+	assert( equal(parse(env, "(X)"), cons(mksym("X"))) );
+	assert( equal(parse(env, "('X)"), cons(mkquote(mksym("X")))) );
+	assert( equal(parse(env, "'('X)"), mkquote(cons(mkquote(mksym("X"))))) );
+	assert( equal(parse(env, "'(X)"), mkquote(cons(mksym("X")))) );
+	assert( equal(parse(env, "(X Y)"), mklist(X, Y)) );
+	assert( equal(parse(env, "(X Y Z)"), mklist(X, Y, Z)) );
+	assert( equal(parse(env, "(X . Y)"), cons(X, Y)) );
+
+	auto xypair = cons(X, Y);
+	assert( equal(parse(env, "((X . Y) (X . Y))"), mklist(xypair, xypair)) );
+	assert( equal(parse(env, "((X . Y) . (X . Y))"), cons(xypair, xypair)) );
+	assert( equal(parse(env, "('(X . Y) . (X . Y))"), cons(mkquote(xypair), xypair)) );
+	assert( equal(parse(env, "((X . Y) (X . Y) Z)"), mklist(xypair, xypair, Z)) );
+	assert( equal(parse(env, "((X . Y) '(X . Y) Z)"), mklist(xypair, mkquote(xypair), Z)) );
+	assert( equal(parse(env, "(Z (X . Y))"), mklist(Z, xypair)) );
 }
 
 
-
-/**
- * Evaluate each item in the list individually
- */
 Obj evlis(ref Obj env, Obj exps) pure @safe nothrow {
 	if( exps is null ) return null;
-	return cons(eval(env, car(exps)),
-				evlis(env, cdr(exps)));
+	return cons(eval(env, car(exps)), evlis(env, cdr(exps)));
 }
 Obj eval (ref Obj env, Obj X)  pure @safe nothrow {
 	if( X !is null ) {
@@ -852,7 +918,6 @@ string eval (ref Obj env, string X) pure @safe nothrow {
 	}
 	return res.toString();
 }
-
 
 
 private void repl (ref Obj env ) {
@@ -933,3 +998,4 @@ private int main (string[] args) {
 	}
 	return 0;
 }
+

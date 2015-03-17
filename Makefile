@@ -25,4 +25,4 @@ lisp.test: lisp.d
 	./$@ -h
 
 clean:
-	rm -f $(TARGETS) *.o *.lst
+	rm -f $(TARGETS) *.o *.lst *.cov 

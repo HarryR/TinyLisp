@@ -1,6 +1,6 @@
 # TinyLISP 
 
-The Tiny Lisp interpreter is written in Digital Mars D and supports a small but consistent suite of builtin functions which should be familiar to Lisp and Scheme users, however a distinctive feature is that this Lisp variant doesn't have integers, strings or other non-symbolic data types, it only has symbols and expressions. The four data types supported are: `SYM`, `PAIR`, `FUN` and `QUOTE`.
+The Tiny Lisp interpreter is written in under 1000 lines of Digital Mars D and supports a minimal but consistent suite of built-in functions which should be familiar to Lisp and Scheme users, however a distinctive feature is that this Lisp variant doesn't have integers, strings or other non-symbolic data types, it only has symbols and expressions. The four data types supported are: `SYM`, `PAIR`, `FUN` and `QUOTE`.
 
   * Garbage collection
   * Lazy evaluation
@@ -14,7 +14,7 @@ The interpreter can operate in two modes: REPL and batch, it also accepts a list
 Batch mode reads one expression from `stdin` and prints the evaluation result to `stdout`.
 
 ```
-$ echo '(eq T T)' | ./lisp
+$ echo '(eq? T T)' | ./lisp
 T
 ```
 
@@ -22,26 +22,49 @@ REPL mode provides an interactive shell environment to evaluate commands one at 
 
 ```
 $ ./lisp
-> (eq T T)
+> (eq? T T)
 = T
 > ...
 ```
 
-### Bugs
+The small number of built-in functions are easily remembered, for reference they are:
+
+  * `(env)` - Get environment
+  * `(env! NEW-ENV)` - Set environment
+  * `(if (X $THEN $ELSE) ...)` - Conditional
+  * `(fun ($ARGS $CODE) ...)` - Create function
+  * `(begin EXPR ...)` - Evaluate many, return last
+  * `(eq? (A B) ...)` - Are `A` and `B` equal?
+  * `(cons (A B) ...)` - Create pair
+  * `(quote (X) ...)` - Encapsulate / escape the value
+  * `(car (X) ...)` - Get `A` record from pair
+  * `(cdr (X) ...)` - Get `B` record from pair
+  * `(car! (X Y) ...)` - Set `A` record of pair `X` to `Y`
+  * `(cdr! (X Y) ...)` - Set `B` record of pair `X` to `Y`
+  * `(set! (SYM VAL) ...)` - Overwrite or add symbol to env
+  * `(def! (SYM VAL) ...)` - Add symbol to env
+  * `(fun? (X) ...)` - Is `X` a function?
+  * `(sym? (X) ...)` - Is `X` a symbol?
+  * `(quote? (X) ...)` - Is `X` quote encapsulated?
+  * `(pair? (X) ...)` - Is `X` a pair?
+  * `(nil? (X) ...)` - Is `X` a `NIL` value? (null/void etc.)
+
+### Bugs?
+
+LOL! There are no bugs... merely features which should be taken into consideration by the user to avoid to avoid errors ;)
+
+On a more serious note [SafeD](http://dlang.org/safed.html) is enforced throughout the interpreter, combined with graceful failure when functions are passed `null` values, thorough unit testing and good code coverage it means that the only time the interpreter should crash if the runtime behavior causes a call chain which exceeds the process stack limit.
 
  * `(cdr! (car (env)) (env))` = segfault during `Obj.toString()` and `equal()` because recursive references aren't taken into consideration.
- * `'((X . Y) '(Z . H))` parses as `((X . Y))`
 
 ## Syntax Conventions
 
  * Symbol names should be `UPPERCASE`
  * Function names should be `lowercase`
- * Functions which modify the environment or their parameters should be suffixed with a `!` bang.
+ * Functions which modify the environment or their parameters should be suffixed with an `!` exclamation mark.
  * Functions which return either `T` or `NIL` should be suffixed with a `?` question mark.
  * Pairs are constructed using the `.` dot, e.g. `(X . Y)`
  * Lists are created by default unless the `.` dot is used, e.g. `(X Y Z)` is equivalent to `(X . (Y . (Z . NIL)))`
-
-## Expressions, Scope and Evaluation
 
 ## Builtin Functions
 
@@ -112,7 +135,7 @@ Evaluates a list of expressions and returns the result of the last expression.
 = T
 ```
 
-#### `(cons (X Y) ...)`
+#### `(cons (A B) ...)`
 
 Creates a pair with the first and second argument, arguments are evaluated when calling.
 
@@ -210,19 +233,19 @@ Define a new symbol by adding it to the environment, a new pair will always be a
 
 #### `(cdr! (X Y) ...)`
 
-Change the B record of a cons to a new value, returns the old value.
+Change the B record of the pair `X` to the new value in `Y`, returns the old value.
 
 #### `(car! (X Y) ...)`
 
-Change the B record of a cons to a new value, returns the old value.
+Change the B record of a the pair `X` to the new value in `Y`, returns the old value.
 
 #### `(fun? (X) ...)`
 
-Is the argument a function which can be used in the left hand side of an expression?
+Is `X` a function which can be used in the left hand side of an expression?
 
 #### `(sym? (X) ...)`
 
-Is the first argument a symbol:
+Is `X` a symbol:
 
 ```
 > (sym? X)
@@ -233,7 +256,7 @@ Is the first argument a symbol:
 
 #### `(quote? (X) ...)`
 
-Is the first argument a quoted expression?
+Is `X` a quoted expression?
 
 ```
 > (quote? (quote))
@@ -248,7 +271,7 @@ Is the first argument a quoted expression?
 
 #### `(pair? (X) ...)`
 
-Return `T` if the argument is a pair.
+Return `T` if `X` is a pair.
 
 ```
 > (pair? (cons))
@@ -257,7 +280,7 @@ Return `T` if the argument is a pair.
 
 #### `(nil? (X) ...)`
 
-Return `T` if the argument is NIL.
+Return `T` if `X` is `NIL`.
 
 ```
 > (nil? (cons))
@@ -266,14 +289,24 @@ Return `T` if the argument is NIL.
 = T
 ```
 
-#### `(eq (A B) ...)`
+#### `(eq? (A B) ...)`
+
+The quality function compares `A` to `B` and returns `T` if they are the same, or `NIL` if they're not. It supports equality operations on all types, including pairs and built-in functions. Comparing pairs is recursive and the contents of each element of the pair are compared, self referential pairs or looped graph structures will go into an infinite loop when checking for quality. Comparing two functions is exactly the same as comparing two pairs as the function is represented by its arguments and code.
 
 ```
-> (eq T T)
-= T
-> (eq NIL NIL)
+> (eq? T NIL)
 = NIL
-> (eq T NIL)
+> (eq? NIL NIL)
+= T
+> (eq? T NIL)
+= NIL
+> (eq? eq eq)
+= T
+> (eq? eq if)
+= NIL
+> (eq? (quote (cons 'A)) (quote (cons 'A)))
+= T
+> (eq? (quote (cons 'A)) (quote (cons 'B)))
 = NIL
 ```
 
