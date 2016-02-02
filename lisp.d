@@ -153,37 +153,30 @@ private class Obj_Fun : Obj {
 	override Obj eval (ref Obj env) pure @safe nothrow {
 		return this;
 	}
-	private bool beginsWithDollar(Obj sym) pure @safe nothrow {
-		return isSYM(sym)
-			&& symname(sym) != null
-			&& symname(sym).length > 0
-			&& symname(sym)[0] == '$';
-	}
 	Obj opCall(ref Obj env, Obj args) pure @safe nothrow {
 		if( func !is null ) {
 			return this.func(env, args);
 		}
-		Obj new_env;
+		Obj new_env = env;
 		if( isSYM(proc_args) ) {
-			if( beginsWithDollar(proc_args) ) {
-				new_env = mapadd(env, proc_args, args);
+			if( isVARSYM(proc_args) ) {
+				new_env = mapadd(new_env, proc_args, args);
 			}
 			else {
-				new_env = mapadd(env, proc_args, evlis(env, args));
+				new_env = mapadd(new_env, proc_args, evlis(new_env, args));
 			}
 		}
 		else {
 			auto tmp = proc_args;
-			new_env = env;
 			while( isPAIR(tmp) ) {
 				auto key = car(tmp);
 				auto val = car(args);
 				if( isSYM(key) ) {
-					if( beginsWithDollar(key) ) {
-						new_env = mapadd(env, key, val);
+					if( isVARSYM(key) ) {
+						new_env = mapadd(new_env, key, val);
 					}
 					else {
-						new_env = mapadd(env, key, .eval(env, val));
+						new_env = mapadd(new_env, key, .eval(new_env, val));
 					}
 				}
 				tmp = cdr(tmp);
@@ -234,6 +227,9 @@ unittest {
 	assert( eval(env, "(X4 Y Z)") == "Z" );
 
 	assert( eval(env, "(fun 'X X)") == "NIL" );
+	assert( eval(env, "((fun ($A . $B) $A) C B D)") == "C" );
+	assert( eval(env, "((fun ($A) $A) 'A)") == "'A" );
+	assert( eval(env, "((fun ($B $A) $A) 'A 'B)") == "'B" );
 }
 
 
@@ -337,6 +333,13 @@ bool isPAIR( const Obj O ) pure @safe nothrow {
 string symname( const Obj O ) pure @safe nothrow {
 	return isSYM(O) ? (cast(const(Obj_Sym))O).name : null;
 }
+bool isVARSYM( const Obj O ) pure @safe nothrow {
+	auto name = symname(O);
+	if( name ) {
+		return name !is null && name.length > 0 && name[0] == '$';
+	}
+	return false;
+}
 unittest {	
 	assert( mksym("NIL") is null );
 	assert( mksym(null) is null );
@@ -351,6 +354,9 @@ unittest {
 	assert( symname(A) == "A" );
 	assert( symname(A) !is null );
 	assert( equal(A, A) );
+	assert( isVARSYM(mksym("$DERP")) );
+	assert( ! isVARSYM(mksym("derp")) );
+	assert( ! isVARSYM(mkquote(mksym("$derp"))) );
 }
 
 
@@ -579,6 +585,7 @@ unittest {
 	assert( eval(env, "(if (fun? if) NIL T)") == "NIL" );
 	assert( eval(env, "(if (fun? if) '1 '2)") == "1" );
 	assert( eval(env, "(if (fun? X) '1 '2)") == "2" );
+	assert( eval(env, "(if T (begin (def! 'X 'Z) X))") == "Z" );
 }
 
 Obj builtin_isPAIR(ref Obj env, Obj args) pure @safe nothrow {
@@ -986,6 +993,7 @@ private int main (string[] args) {
 			}
 		}
 	}
+
 	// Start a REPL if user is on a terminal
 	if( isatty(stdin.fileno()) ) {
 		repl(env);

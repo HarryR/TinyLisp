@@ -49,13 +49,15 @@ The small number of built-in functions are easily remembered, for reference they
   * `(pair? (X) ...)` - Is `X` a pair?
   * `(nil? (X) ...)` - Is `X` a `NIL` value? (null/void etc.)
 
-### Bugs?
+### Bugs & TODO?
 
 LOL! There are no bugs... merely features which should be taken into consideration by the user to avoid to avoid errors ;)
 
 On a more serious note [SafeD](http://dlang.org/safed.html) is enforced throughout the interpreter, combined with graceful failure when functions are passed `null` values, thorough unit testing and good code coverage it means that the only time the interpreter should crash if the runtime behavior causes a call chain which exceeds the process stack limit.
 
  * `(cdr! (car (env)) (env))` = segfault during `Obj.toString()` and `equal()` because recursive references aren't taken into consideration.
+ * Parser support for comments
+ * Code examples
 
 ## Syntax Conventions
 
