@@ -46,7 +46,7 @@ The small number of built-in functions are easily remembered, for reference they
   * `(fun? (X) ...)` - Is `X` a function?
   * `(sym? (X) ...)` - Is `X` a symbol?
   * `(quote? (X) ...)` - Is `X` quote encapsulated?
-  * `(pair? (X) ...)` - Is `X` a pair?
+  * `(cons? (X) ...)` - Is `X` a pair? - constructed with (cons ...)
   * `(nil? (X) ...)` - Is `X` a `NIL` value? (null/void etc.)
 
 ### Bugs & TODO?
@@ -271,12 +271,12 @@ Is `X` a quoted expression?
 = T
 ```
 
-#### `(pair? (X) ...)`
+#### `(cons? (X) ...)`
 
 Return `T` if `X` is a pair.
 
 ```
-> (pair? (cons))
+> (cons? (cons))
 = T
 ```
 
