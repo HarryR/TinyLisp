@@ -132,7 +132,7 @@ private class Obj_Quote : Obj {
 	}
 }
 
-public alias Logic_EnvArg = Obj function(ref Obj env, Obj args) pure @safe nothrow;
+public alias Obj function(ref Obj env, Obj args) pure @safe nothrow Logic_EnvArg;
 private class Obj_Fun : Obj {
 	Obj proc_code;
 	Obj proc_args;
