@@ -158,12 +158,13 @@ private class Obj_Fun : Obj {
 			return this.func(env, args);
 		}
 		Obj new_env = env;
+		Obj tmp_env = env;
 		if( isSYM(proc_args) ) {
 			if( isVARSYM(proc_args) ) {
-				new_env = mapadd(new_env, proc_args, args);
+				new_env = mapadd(env, proc_args, args);
 			}
 			else {
-				new_env = mapadd(new_env, proc_args, evlis(new_env, args));
+				new_env = mapadd(env, proc_args, evlis(tmp_env, args));
 			}
 		}
 		else {
@@ -176,7 +177,7 @@ private class Obj_Fun : Obj {
 						new_env = mapadd(new_env, key, val);
 					}
 					else {
-						new_env = mapadd(new_env, key, .eval(env, val));
+						new_env = mapadd(new_env, key, .eval(tmp_env, val));
 					}
 				}
 				tmp = cdr(tmp);
@@ -602,9 +603,9 @@ unittest {
 	assert( eval(env, "(nil? T)") == "NIL" );
 	assert( eval(env, "(nil? NIL)") == "T" );
 
-	assert( eval(env, "(pair? (cons 'A 'B))") == "T" );
-	assert( eval(env, "(pair? T)") == "NIL" );
-	assert( eval(env, "(pair?)") == "NIL" );
+	assert( eval(env, "(cons? (cons 'A 'B))") == "T" );
+	assert( eval(env, "(cons? T)") == "NIL" );
+	assert( eval(env, "(cons?)") == "NIL" );
 }
 
 Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
@@ -639,7 +640,7 @@ unittest {
 	assert( equal(car(A), mksym("T")) );
 
 	eval(env, "(def! 'A (cons 'X 'Y))");
-	assert( eval(env, "(pair? A)") == "T" );
+	assert( eval(env, "(cons? A)") == "T" );
 	assert( eval(env, "(car A)") == "X" );
 	assert( eval(env, "(cdr A)") == "Y" );
 	eval(env, "(cdr! A T)");
@@ -657,7 +658,7 @@ Obj builtin_env(ref Obj env, Obj args) pure @safe nothrow {
 unittest {
 	auto env = mkenv();
 	assert( eval(env, "(env)") != "NIL" );
-	assert( eval(env, "(pair? (env))") == "T" );
+	assert( eval(env, "(cons? (env))") == "T" );
 
 	assert( env !is null );
 	assert( eval(env, "(env!)") == "NIL" );
@@ -746,7 +747,7 @@ Obj mkenv () pure @safe nothrow {
 
 		cons("fun?", &builtin_isFUN, mklist(mksym("X"))),
 		cons("quote?", &builtin_isQUOTE, mklist(mksym("X"))),
-		cons("pair?", &builtin_isPAIR, mklist(mksym("X"))),
+		cons("cons?", &builtin_isPAIR, mklist(mksym("X"))),
 		cons("nil?", &builtin_isNIL, mklist(mksym("X"))),
 		cons("sym?", &builtin_isSYM, mklist(mksym("X"))),
 		cons("eq?", &builtin_equal, mklist(mksym("X"), mksym("Y"))),
@@ -759,6 +760,7 @@ Obj mkenv () pure @safe nothrow {
 		cons("quote", &builtin_quote, mklist(mksym("X"))),
 		cons("car", &builtin_car, mklist(mksym("X"))),
 		cons("cdr", &builtin_cdr, mklist(mksym("X"))),
+		cons("list", &evlis, mksym("ARGS")),
 	);
 	return env;
 }

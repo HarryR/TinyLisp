@@ -17,7 +17,7 @@ lisp: lisp.d
 cov: lisp.cov
 lisp.cov: lisp.d
 	$(DMD_COV) -of$@ $+
-	./$@ -h || cat lisp.lst  | grep -n 0000000
+	echo '(adder (list 0 1 0 1 1) (list 0 1))' | ./$@ examples/binary.lsp && cat lisp.lst  | grep -n 0000000
 
 test: lisp.test
 lisp.test: lisp.d
