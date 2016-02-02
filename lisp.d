@@ -782,6 +782,10 @@ private bool skipwhite( string str, ref int offs ) pure @safe nothrow {
 	while( offs < str.length && isWhite(str[offs]) ) offs++;
 	return offs < str.length;
 }
+private bool skipuntilnewline( string str, ref int offs ) pure @safe nothrow {
+	while( offs < str.length && str[offs] != '\n' && str[offs] != '\r' ) offs++;
+	return offs < str.length;
+}
 private Obj parseObj(ref Obj env, string str, ref int offs, ref bool ok) pure @safe nothrow {
 	if( ! skipwhite(str, offs) || str[offs] == ')' ) {
 		ok = false;
@@ -853,9 +857,16 @@ private Obj parseObj(ref Obj env, string str, ref int offs, ref bool ok) pure @s
 		}
 		return mkquote(X);
 	}
+	else if( str[offs] == ';' ) {
+		if( ! skipuntilnewline(str, offs) ) {
+			ok = false;
+			return null;
+		}
+		return parseObj(env, str, offs, ok);
+	}
 
 	auto start = offs;
-	while( offs < str.length && ! isparen(str[offs]) && ! isWhite(str[offs]) ) {
+	while( offs < str.length && str[offs] != ';' && ! isparen(str[offs]) && ! isWhite(str[offs]) ) {
 		offs++;
 	}
 	if( (offs - start) <= 0 ) {

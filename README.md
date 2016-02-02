@@ -61,12 +61,14 @@ On a more serious note [SafeD](http://dlang.org/safed.html) is enforced througho
 
 ## Syntax Conventions
 
+ * Comments begin with a semicolon (;) and continue until the end of the line
  * Symbol names should be `UPPERCASE`
  * Function names should be `lowercase`
  * Functions which modify the environment or their parameters should be suffixed with an `!` exclamation mark.
  * Functions which return either `T` or `NIL` should be suffixed with a `?` question mark.
  * Pairs are constructed using the `.` dot, e.g. `(X . Y)`
  * Lists are created by default unless the `.` dot is used, e.g. `(X Y Z)` is equivalent to `(X . (Y . (Z . NIL)))`
+
 
 ## Builtin Functions
 
