@@ -176,7 +176,7 @@ private class Obj_Fun : Obj {
 						new_env = mapadd(new_env, key, val);
 					}
 					else {
-						new_env = mapadd(new_env, key, .eval(new_env, val));
+						new_env = mapadd(new_env, key, .eval(env, val));
 					}
 				}
 				tmp = cdr(tmp);
@@ -1006,4 +1006,3 @@ private int main (string[] args) {
 	}
 	return 0;
 }
-
