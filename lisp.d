@@ -21,7 +21,7 @@ module lisp;
 
 import std.stdio: File, stdin, write, writef;
 import std.ascii: isWhite;
-import std.getopt: getopt, GetOptException;
+import std.getopt: getopt;
 import std.outbuffer: OutBuffer;
 import core.sys.posix.unistd: isatty;
 
@@ -963,7 +963,7 @@ private int main (string[] args) {
 		try {
 			getopt(args, "h|v|?", &show_version);
 		}
-		catch ( GetOptException ex ) {
+		catch ( Exception ex ) {
 			write("Error: ", ex.msg, "\n");
 			show_version = true;
 		}
