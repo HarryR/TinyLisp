@@ -2,9 +2,9 @@
 
 The `Tiny` Lisp 1.5 inspired interpreter is written around 1000 lines of Digital Mars D and supports a minimal but consistent suite of built-in functions which should be familiar to Lisp and Scheme users, however a major distinction is that this Lisp variant doesn't have integers, strings or useful data types, it only has symbols and expressions. The five data types supported are: `SYM`, `PAIR`, `FUN`, `QUOTE` and `NIL`.
 
-Consider this programming Lisp, in ultra-hard difficulty. The basic constructs and method of evaluation should be compared to metaprogramming, the runtime provides a way of constructing and operating on symbols to compute the desired results, but lacks complex data types.
+Consider this programming Lisp, in ultra-hard difficulty, a Lisp-flavoured dynamic assembly language for symbolic logic. The basic constructs and method of evaluation should be compared to metaprogramming, the runtime provides a way of constructing, organising and operating on symbols to compute the desired results, but lacks the complex data types necessary to make life easy.
 
-    "With sweat, blood, tears and logic you can implement anything in TinyLISP"™
+    With sweat, blood, tears and logic, anything is possible in TinyLISP™
 
 ## Features
 
