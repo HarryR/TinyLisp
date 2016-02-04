@@ -19,7 +19,7 @@
 
 module lisp;
 
-import std.stdio: File, stdin, write, writef;
+import std.stdio: File, stdin, write;
 import std.ascii: isWhite;
 import std.getopt: getopt, GetOptException;
 import std.outbuffer: OutBuffer;

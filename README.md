@@ -1,12 +1,17 @@
 # TinyLISP 
 
-The Tiny Lisp interpreter is written in under 1000 lines of Digital Mars D and supports a minimal but consistent suite of built-in functions which should be familiar to Lisp and Scheme users, however a distinctive feature is that this Lisp variant doesn't have integers, strings or other non-symbolic data types, it only has symbols and expressions. The four data types supported are: `SYM`, `PAIR`, `FUN` and `QUOTE`.
+The `Tiny` Lisp 1.5 inspired interpreter is written around 1000 lines of Digital Mars D and supports a minimal but consistent suite of built-in functions which should be familiar to Lisp and Scheme users, however a major distinction is that this Lisp variant doesn't have integers, strings or useful data types, it only has symbols and expressions. The five data types supported are: `SYM`, `PAIR`, `FUN`, `QUOTE` and `NIL`.
+
+Consider this programming Lisp, in ultra-hard difficulty. The basic constructs and method of evaluation should be compared to metaprogramming, the runtime provides a way of constructing and operating on symbols to compute the desired results, but lacks complex data types.
+
+    "With sweat, blood, tears and logic you can implement anything in TinyLISP"™
+
+## Features
 
   * Garbage collection
   * Lazy evaluation
   * Familiar LISP syntax
   * UTF-8 in symbols
-  * First-class functions
   * Memory safe interpreter
 
 The interpreter can operate in two modes: REPL and batch, it also accepts a list of files on the command line which will be silently evaluated and can be used to prepare the environment or load libraries of functions etc.
@@ -48,6 +53,7 @@ The small number of built-in functions are easily remembered, for reference they
   * `(quote? (X) ...)` - Is `X` quote encapsulated?
   * `(cons? (X) ...)` - Is `X` a pair? - constructed with (cons ...)
   * `(nil? (X) ...)` - Is `X` a `NIL` value? (null/void etc.)
+  * `(list ARGS ...)` - Return ARGS after evaluation, as a list
 
 ### Bugs & TODO?
 
@@ -56,8 +62,11 @@ LOL! There are no bugs... merely features which should be taken into considerati
 On a more serious note [SafeD](http://dlang.org/safed.html) is enforced throughout the interpreter, combined with graceful failure when functions are passed `null` values, thorough unit testing and good code coverage it means that the only time the interpreter should crash if the runtime behavior causes a call chain which exceeds the process stack limit.
 
  * `(cdr! (car (env)) (env))` = segfault during `Obj.toString()` and `equal()` because recursive references aren't taken into consideration.
- * Parser support for comments
- * Code examples
+ * Useful standard library or libraries
+ * More interesting examples
+ * Ad-hoc evaluation (interpret data as code, like `eval`)
+ * Unit testing framework
+ * Useful syntax and parsing errors
 
 ## Syntax Conventions
 
@@ -69,6 +78,25 @@ On a more serious note [SafeD](http://dlang.org/safed.html) is enforced througho
  * Pairs are constructed using the `.` dot, e.g. `(X . Y)`
  * Lists are created by default unless the `.` dot is used, e.g. `(X Y Z)` is equivalent to `(X . (Y . (Z . NIL)))`
 
+
+## Examples
+
+```lisp
+; Combine elements from two lists into a single list of pairs
+;
+;   > (zip (list 'A 'B) (list 'C 'D))
+;   = ((A . C) (B . D))
+;
+(def! 'zip (fun (LIST-A LIST-B) (begin
+  (def! 'CAN-ZIP (if (cons? LIST-A) (cons? LIST-B)))
+  (if CAN-ZIP (begin
+    (cons
+      (cons (car LIST-A) (car LIST-B))
+      (zip (cdr LIST-A) (cdr LIST-B))
+    )
+  ))
+)))
+```
 
 ## Builtin Functions
 
