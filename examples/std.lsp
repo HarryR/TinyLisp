@@ -123,4 +123,17 @@
 			)
 		)
 	))
+
+
+	; Applies a function to a list
+	; Returns a list containing the results
+	;
+	;	> (map (fun (X) (eq? X 'DERP)) (list 'A 'B 'DERP 'C 'DERP))
+	;	= (NIL NIL T NIL T)
+	;
+	(def! 'map (fun (FUN LIST)
+		(if (cons? LIST)
+			(cons (FUN (car LIST)) (map FUN (cdr LIST)))
+		)
+	))
 )
