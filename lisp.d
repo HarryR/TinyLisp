@@ -568,7 +568,8 @@ Obj builtin_isFUN(ref Obj env, Obj args) pure @safe nothrow {
 	return isFUN(A) ? mksym("T") : null;
 }
 Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
-	auto cond = eval(env, car(args));
+	auto T = mksym("T");
+	auto cond = equal(eval(env, car(args)), T) ? T : null;
 	auto next = cdr(args);
 	if( cond !is null ) {
 		return eval(env, car(next));

@@ -103,4 +103,24 @@
 	(def! 'all? (fun LIST
 		(all:list? LIST)
 	))
+
+
+	; Use a function to filter a list
+	; Pass each item of the list to the function
+	; Return a list containing only items where the function returns T
+	;
+	;	> (filter (fun (X) (eq? X 'DERP)) (list 'A 'B 'DERP 'C 'DERP))
+	;	= (DERP DERP)
+	;
+	;	> (filter (fun (X) T) (list 'A 'B 'C))
+	;	= (A B C)
+	;
+	(def! 'filter (fun (FUN LIST)
+		(if (cons? LIST)
+			(if (FUN (car LIST))
+				(cons (car LIST) (filter FUN (cdr LIST)))
+				(filter FUN (cdr LIST))
+			)
+		)
+	))
 )
