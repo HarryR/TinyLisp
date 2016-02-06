@@ -65,17 +65,49 @@
 	))
 
 
-	(def! 'all:list? (fun (LIST)
+	; Is the value anything other than NIL?
+	;
+	;	> (not-NIL? NIL)
+	;	= NIL
+	;
+	;	> (not-NIL? T)
+	;	= T
+	;
+	;	> (not-NIL? 'DERP)
+	;	= T
+	;
+	(def! 'not-NIL? (fun (VALUE)
+		(if (eq? VALUE NIL)
+			T
+			NIL
+		)
+	))
+
+
+	; Is the value NIL?
+	;
+	;	> (nil? NIL)
+	;	= T
+	;
+	;	> (nil? 'DERP)
+	;	= NIL
+	;
+	(def! 'nil? (fun (VALUE)
+		(eq? VALUE NIL)
+	))
+
+
+	(def! 'all-list? (fun (LIST)
 		(if (cons? LIST)
 			(begin
 				(def! 'ITEM (car LIST))
 				(if (cons? ITEM)
 					; Item is another list...
-					(if (all:list? ITEM)
+					(if (all-list? ITEM)
 						; ITEM (a list) contains only T values..
 						(if (list-end? LIST)
 							T
-							(all:list? (cdr LIST))
+							(all-list? (cdr LIST))
 						)
 					)
 					; Otherwise item is a value
@@ -83,7 +115,7 @@
 						; Item is T ... move to next item
 						(if (list-end? LIST)
 							T
-							(all:list? (cdr LIST))
+							(all-list? (cdr LIST))
 						)
 					)
 				)
@@ -101,7 +133,7 @@
 	;	= NIL
 	;
 	(def! 'all? (fun LIST
-		(all:list? LIST)
+		(all-list? LIST)
 	))
 
 
@@ -149,5 +181,50 @@
 			(reduce FUN (FUN ARG (car LIST)) (cdr LIST))
 			ARG
 		)
+	))
+
+
+	; Get the second VALUE from a list
+	;
+	;	> (list-next (list 'A 'B))
+	;	= B
+	;
+	(def! 'list-2nd (fun (LIST)
+		(car (cdr LIST))
+	))
+
+
+	; Get the third VALUE from a list
+	;
+	;	> (list-3rd (list 'A 'B 'C))
+	;	= C
+	;
+	(def! 'list-3rd (fun (LIST)
+		(car (cdr (cdr LIST)))
+	))
+
+
+	; Connect the end of the list with the beginning of the list
+	;
+	;	> (cycle (list 'A 'B))
+	;	= ... infinite recursion while printing result
+	;
+	;	> (list-3rd (cycle (list 'A 'B)))
+	;	= A
+	;
+	;	> (list-2nd (cycle (list 'A 'B)))
+	;	= B
+	;
+	(def! 'cycle (fun (LIST HEAD)
+		(if (cons? LIST) (begin
+			(if (nil? HEAD) (set! 'HEAD LIST))
+			(if (list-end? LIST)
+				(begin
+					(cdr! LIST HEAD)
+					HEAD
+				)
+				(cycle (cdr LIST) HEAD)
+			)
+		))
 	))
 )
