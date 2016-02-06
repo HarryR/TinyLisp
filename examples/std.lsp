@@ -186,7 +186,7 @@
 
 	; Get the second VALUE from a list
 	;
-	;	> (list-next (list 'A 'B))
+	;	> (list-2nd (list 'A 'B))
 	;	= B
 	;
 	(def! 'list-2nd (fun (LIST)
@@ -204,7 +204,7 @@
 	))
 
 
-	; Connect the end of the list with the beginning of the list
+	; Connect the end of the list to the beginning of the list
 	;
 	;	> (cycle (list 'A 'B))
 	;	= ... infinite recursion while printing result
@@ -226,5 +226,20 @@
 				(cycle (cdr LIST) HEAD)
 			)
 		))
+	))
+
+
+	; Return the list in reverse order
+	;
+	;	> (reverse (list 'A 'B 'C))
+	;	= (C B A)
+	;
+	(def! 'reverse (fun (LIST CARRY)
+		(if (cons? LIST)
+			(if (list-end? LIST)
+				(cons (car LIST) CARRY)
+				(reverse (cdr LIST) (cons (car LIST) CARRY))
+			)
+		)
 	))
 )
