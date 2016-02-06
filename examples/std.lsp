@@ -136,4 +136,18 @@
 			(cons (FUN (car LIST)) (map FUN (cdr LIST)))
 		)
 	))
+
+
+	; Fold the list into the function
+	; Reducing it to a single output value
+	;
+	;	> (reduce (fun (A B) (if (eq? (if A T) (if B T)) A)) T (list T T T))
+	;	= T
+	;
+	(def! 'reduce (fun (FUN ARG LIST)
+		(if (cons? LIST)
+			(reduce FUN (FUN ARG (car LIST)) (cdr LIST))
+			ARG
+		)
+	))
 )
