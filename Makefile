@@ -23,7 +23,7 @@ lisp.cov: $(MAIN_SRC)
 test: lisp.test
 lisp.test: $(MAIN_SRC)
 	$(DMD_DEBUG) -of$@ $+
-	./$@ -h
+	echo '(env)' | ./$@ examples/std.lsp
 
 clean:
 	rm -f $(TARGETS) *.o *.lst *.cov 
