@@ -19,11 +19,7 @@
 
 module lisp;
 
-import std.stdio: File, stdin, write;
 import std.ascii: isWhite;
-import std.getopt: getopt, GetOptException;
-import std.outbuffer: OutBuffer;
-import core.sys.posix.unistd: isatty;
 
 private enum Type {
 	SYM, PAIR, FUN, QUOTE
@@ -527,16 +523,16 @@ unittest {
 	assert( eval(env, "(eq? (quote (cons 'A)) (quote (cons NIL)))") == "NIL" );
 }
 
-Obj builtin_quote(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_quote(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return mkquote(car(args));
 }
-Obj builtin_isQUOTE(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_isQUOTE(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	auto A = car(args);
 	return isQUOTE(A) ? mksym("T") : null;
 }
-Obj builtin_isSYM(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_isSYM(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	auto A = car(args);
 	return isSYM(A) ? mksym("T") : null;
@@ -555,19 +551,19 @@ unittest {
 	assert( eval(env, "(quote '1)") == "'1" );
 }
 
-Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
 	auto proc_args = car(args);
 	auto proc_code = car(cdr(args));
 	return (isSYM(proc_args) || isPAIR(proc_args))
 		 ? new Obj_Fun(proc_args, proc_code)
 		 : null;
 }
-Obj builtin_isFUN(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_isFUN(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	auto A = car(args);
 	return isFUN(A) ? mksym("T") : null;
 }
-Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
 	auto T = mksym("T");
 	auto cond = equal(eval(env, car(args)), T) ? T : null;
 	auto next = cdr(args);
@@ -590,11 +586,11 @@ unittest {
 	assert( eval(env, "(if T (begin (def! 'X 'Z) X))") == "Z" );
 }
 
-Obj builtin_isPAIR(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_isPAIR(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return isPAIR(car(args)) ? mksym("T") : null;
 }
-Obj builtin_isNIL(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_isNIL(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return car(args) is null ? mksym("T") : null;
 }
@@ -609,25 +605,25 @@ unittest {
 	assert( eval(env, "(cons?)") == "NIL" );
 }
 
-Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	auto A = car(args);
 	auto B = car(cdr(args));
 	return cons(A, B);
 }
-Obj builtin_car(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_car(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return car(car(args));
 }
-Obj builtin_cdr(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_cdr(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return cdr(car(args));
 }
-Obj builtin_setcar(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_setcar(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return setcar(car(args), car(cdr(args)));
 }
-Obj builtin_setcdr(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_setcdr(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return setcdr(car(args), car(cdr(args)));
 }
@@ -650,10 +646,10 @@ unittest {
 	assert( eval(env, "(car A)") == "T" );
 }
 
-Obj builtin_setenv(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_setenv(ref Obj env, Obj args) pure @safe nothrow {
 	return env = car(evlis(env, args));
 }
-Obj builtin_env(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_env(ref Obj env, Obj args) pure @safe nothrow {
 	return env;
 }
 unittest {
@@ -665,7 +661,7 @@ unittest {
 	assert( eval(env, "(env!)") == "NIL" );
 	assert( env is null );
 }
-Obj builtin_setb(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_setb(ref Obj env, Obj args) pure @safe nothrow {
 	auto key = eval(env, car(args));
 	auto val = eval(env, car(cdr(args)));
 	if( key !is null && isSYM(key) ) {
@@ -682,7 +678,7 @@ Obj builtin_setb(ref Obj env, Obj args) pure @safe nothrow {
 	}
 	return null;
 }
-Obj builtin_defb(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_defb(ref Obj env, Obj args) pure @safe nothrow {
 	auto key = eval(env, car(args));
 	auto val = eval(env, car(cdr(args)));
 	if( key !is null && isSYM(key) ) {
@@ -713,7 +709,7 @@ unittest {
 	assert( eval(env, "(cdr (car (cdr (env))))") == "T" );
 }
 
-Obj builtin_begin(ref Obj env, Obj args) pure @safe nothrow {
+private Obj builtin_begin(ref Obj env, Obj args) pure @safe nothrow {
 	while( isPAIR(args) ) {
 		auto exp = car(args);
 		auto next = cdr(args);
@@ -775,16 +771,19 @@ unittest {
 	assert( null is mapfind(env, "diwehfewi") );
 }
 
-
-private bool isparen( char ch ) pure @safe nothrow {
-	return ch == '(' || ch == ')' || ch == '\'';
+private bool isEndOfSymbolName( char ch ) pure @safe nothrow {
+	return isWhite(ch) || ch == '(' || ch == ')' || ch == '\'' || ch == ';';
 }
 private bool skipwhite( string str, ref int offs ) pure @safe nothrow {
-	while( offs < str.length && isWhite(str[offs]) ) offs++;
-	return offs < str.length;
-}
-private bool skipuntilnewline( string str, ref int offs ) pure @safe nothrow {
-	while( offs < str.length && str[offs] != '\n' && str[offs] != '\r' ) offs++;
+	while( offs < str.length ) {
+		// Comments are considered whitespace, and should also be skipped
+		if( str[offs] == ';' ) {
+			offs++;
+			while( offs < str.length && str[offs] != '\n' && str[offs] != '\r' ) offs++;			
+		}
+		if( ! isWhite(str[offs]) ) break;
+		offs++;
+	}
 	return offs < str.length;
 }
 private Obj parseObj(ref Obj env, string str, ref int offs, ref bool ok) pure @safe nothrow {
@@ -838,7 +837,7 @@ private Obj parseObj(ref Obj env, string str, ref int offs, ref bool ok) pure @s
 					Y = Z;
 				}
 			}
-		} // while( true )
+		}
 		if( ! skipwhite(str, offs) ) {
 			ok = false;
 			return null;
@@ -858,16 +857,10 @@ private Obj parseObj(ref Obj env, string str, ref int offs, ref bool ok) pure @s
 		}
 		return mkquote(X);
 	}
-	else if( str[offs] == ';' ) {
-		if( ! skipuntilnewline(str, offs) ) {
-			ok = false;
-			return null;
-		}
-		return parseObj(env, str, offs, ok);
-	}
 
+	// Parse symbol name
 	auto start = offs;
-	while( offs < str.length && str[offs] != ';' && ! isparen(str[offs]) && ! isWhite(str[offs]) ) {
+	while( offs < str.length && ! isEndOfSymbolName(str[offs]) ) {
 		offs++;
 	}
 	if( (offs - start) <= 0 ) {
@@ -938,85 +931,4 @@ string eval (ref Obj env, string X) pure @safe nothrow {
 		return "NIL";
 	}
 	return res.toString();
-}
-
-
-private void repl (ref Obj env ) {
-	string line;
-	while( true ) {
-		write("> ");
-		if( (line = stdin.readln()) is null ) {
-			break;
-		}
-		write("= ", eval(env, line), "\n");
-	}
-}
-private string readWholeFile (string filename) {
-	auto buf = new OutBuffer();
-	auto file = File(filename, "rb");
-	return readWholeStream(file);
-}
-private string readWholeStream (File file) {
-	auto buf = new OutBuffer();
-	if( file.size != ulong.max ) {
-		// XXX: this would cause segfault if size unknown
-		// e.g. echo '' | ./lisp
-		buf.reserve(file.size());
-	}
-	foreach( chunk; file.byChunk(1024*10) ) {
-		buf.write(chunk);
-	}
-	return buf.toString();
-}
-private int main (string[] args) {
-	auto env = mkenv();
-	auto show_version = false;
-	try {		
-		try {
-			getopt(args, "h|v|?", &show_version);
-		}
-		catch ( GetOptException ex ) {
-			write("Error: ", ex.msg, "\n");
-			show_version = true;
-		}
-	}
-	catch( Exception ex ) {
-		show_version = true;
-	}
-	if( show_version ) {
-   		write("Usage: lisp [file ...]\n\n");
-   		return 1;
-	}
-	// Silently evaluate any files given on the commandline
-	auto files = args[1 .. args.length];
-	if( files.length > 0 ) {
-		foreach( string filename; files ) {
-			string contents;
-			try {
-				contents = readWholeFile(filename);
-			}
-			catch( Exception ex ) {
-				write("Error: ", ex.msg, "\n");
-				return 1;
-			}
-			if( contents !is null && contents.length ) {
-				auto obj = parse(env, contents);
-				if( obj !is null ) {
-					eval(env, obj);
-				}
-			}
-		}
-	}
-
-	// Start a REPL if user is on a terminal
-	if( isatty(stdin.fileno()) ) {
-		repl(env);
-		return 0;
-	}
-	// Otherwise evaluate the content of stdin
-	auto content = readWholeStream(stdin);
-	if( content !is null && content.length ) {
-		write(eval(env, content), "\n");
-	}
-	return 0;
 }
