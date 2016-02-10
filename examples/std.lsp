@@ -41,7 +41,7 @@
 	(def! 'list-end? (fun (LIST)
 		(if (cons? LIST)
 			(eq? (cdr LIST) NIL)
-			(cons? (cdr LIST))
+			T
 		)
 	))
 
