@@ -21,10 +21,27 @@
 > (list-end? (list 'A 'B))
 = NIL
 
-> (list-append (list 'A 'B) 'C)
+> (list-append! (list 'A 'B) 'C)
 = (A B C)
-> (list-append (list 'A) 'B)
+> (list-append! (list 'A) 'B)
 = (A B)
+
+> (list-pop! (list 'A 'B))
+= A
+> (def! 'TEST (list 'A 'B 'C))
+> (list-pop! TEST)
+= A
+> (list-pop! TEST)
+= B
+> TEST
+= (C)
+; Verify we can pop from the environment
+> (car (env))
+= (TEST C)
+> (list-pop! (env))
+= (TEST C)
+> TEST
+= NIL
 
 > (not-T? NIL)
 = T
