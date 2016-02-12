@@ -18,6 +18,13 @@
 
 > (list-end?)
 = T
+> (list-end? (list 'A 'B))
+= NIL
+
+> (list-append (list 'A 'B) 'C)
+= (A B C)
+> (list-append (list 'A) 'B)
+= (A B)
 
 > (not-T? NIL)
 = T

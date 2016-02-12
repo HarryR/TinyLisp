@@ -54,6 +54,21 @@
 	))
 
 
+	; Append ITEM to the end of LIST
+	(def! 'list-append (fun (LIST ITEM CARRY)
+		(if (cons? LIST) (begin
+			(set! 'CARRY (if (nil? CARRY) LIST CARRY))
+			(if (list-end? LIST)
+				(begin
+					(cdr! LIST (cons ITEM NIL))
+					CARRY
+				)
+				(list-append (cdr LIST) ITEM CARRY)
+			)
+		))
+	))
+
+
 	; Is the value not T?
 	;
 	;	> (not-T? NIL)
