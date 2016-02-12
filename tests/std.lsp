@@ -43,6 +43,15 @@
 > TEST
 = NIL
 
+> (list-push! (list 'B 'C) 'A)
+= (A B C)
+
+> (def! 'TEST (list 'A 'B 'C))
+> (list-eject! TEST)
+= C
+> TEST
+= (A B)
+
 > (not-T? NIL)
 = T
 > (not-T? (cons 'A 'B))

@@ -82,6 +82,36 @@
 	))
 
 
+	; Push an item onto the head of the list
+	; Returning the new head of the list
+	(def! 'list-push! (fun (LIST ITEM)
+		(if (cons? LIST) (begin
+			(def! 'NEXT-ITEM (car LIST))
+			(def! 'NEXT-TAIL (cdr LIST))
+			(car! LIST ITEM)
+			(cdr! LIST (cons NEXT-ITEM NEXT-TAIL))
+			LIST
+		))
+	))
+
+
+	; Remove the last item from he list and return it
+	(def! 'list-eject! (fun (LIST PREV)
+		(if (cons? LIST)
+			(if (list-end? LIST)
+				(begin
+					(cdr! PREV NIL)
+					(car LIST)
+				)
+				(begin
+					(set! PREV (if (nil? PREV) LIST PREV))
+					(list-eject! (cdr LIST) LIST)
+				)
+			)
+		)
+	))
+
+
 	; Is the value not T?
 	;
 	;	> (not-T? NIL)
@@ -130,6 +160,11 @@
 	;
 	(def! 'nil? (fun (VALUE)
 		(eq? VALUE NIL)
+	))
+
+
+	(def! 't? (fun (VALUE)
+		(eq? VALUE T)
 	))
 
 
