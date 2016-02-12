@@ -23,17 +23,25 @@
 	;
 	;	> (any? NIL T NIL)
 	;	= T
-	;	
-	(def! 'any? (fun LIST (begin
+	;
+	(def! 'any-list? (fun (LIST)
 		(if (cons? LIST)
-			; Recursively check if any elements are T
-			(if (car LIST)
-				T
-				(if (cons any (cdr LIST)) T)
+			(if (cons? (car LIST))
+				; Item is another list...
+				(if (any-list? (car LIST)) T)
+				; Otherwise item is a value
+				(if (eq? (car LIST) T)
+					T
+					(if (list-end? LIST)
+						NIL
+						(any-list? (cdr LIST))
+					)
+				)
 			)
-			; Otherwise an immediate value test
-			(if LIST T)
 		)
+	))
+	(def! 'any? (fun LIST (begin
+		(any-list? LIST)
 	)))
 
 
@@ -78,8 +86,8 @@
 	;
 	(def! 'not-NIL? (fun (VALUE)
 		(if (eq? VALUE NIL)
-			T
 			NIL
+			T
 		)
 	))
 
@@ -97,6 +105,14 @@
 	))
 
 
+	; Return NIL of any of the arguments are not T, or lists of T (recursively)
+	;
+	;	> (all? T T)
+	;	= T
+	;
+	;	> (all? T NIL T)
+	;	= NIL
+	;
 	(def! 'all-list? (fun (LIST)
 		(if (cons? LIST)
 			(begin
@@ -122,16 +138,6 @@
 			)
 		)
 	))
-
-
-	; Return NIL of any of the arguments are not T, or lists of T (recursively)
-	;
-	;	> (all? T T)
-	;	= T
-	;
-	;	> (all? T NIL T)
-	;	= NIL
-	;
 	(def! 'all? (fun LIST
 		(all-list? LIST)
 	))

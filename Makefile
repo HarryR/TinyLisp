@@ -18,12 +18,12 @@ lisp: $(MAIN_SRC)
 cov: lisp.cov
 lisp.cov: $(MAIN_SRC)
 	$(DMD_COV) -of$@ $+
-	echo '(adder (list 0 1 0 1 1) (list 0 1))' | ./$@ examples/binary.lsp && cat lisp.lst  | grep -n 0000000
+	./$@ -t tests/std.lsp && cat lisp.lst  | grep -n 0000000
 
 test: lisp.test
 lisp.test: $(MAIN_SRC)
 	$(DMD_DEBUG) -of$@ $+
-	echo '(env)' | ./$@ examples/std.lsp
+	./$@ -t tests/std.lsp
 
 clean:
 	rm -f $(TARGETS) *.o *.lst *.cov 
