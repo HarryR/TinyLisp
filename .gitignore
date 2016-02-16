@@ -2,4 +2,5 @@
 *.lst
 *.cov
 *.test
-lisp
+.dub
+tinylisp
