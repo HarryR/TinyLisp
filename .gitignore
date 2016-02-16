@@ -1,6 +1,3 @@
-*.o
-*.lst
-*.cov
-*.test
 .dub
 tinylisp
+__test__library__
