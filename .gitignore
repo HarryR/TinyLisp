@@ -1,5 +1,3 @@
-*.o
-*.lst
-*.cov
-*.test
-lisp
+.dub
+tinylisp
+__test__library__

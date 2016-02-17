@@ -1,0 +1,7 @@
+{
+	"name": "tinylisp",
+	"description": "Minimal symbolic Lisp 1.5-style interpreter",
+	"authors": ["Harry Roberts"],
+	"homepage": "https://github.com/HarryR/TinyLisp/issues/1",
+	"license": "GPL-2.0"
+}
