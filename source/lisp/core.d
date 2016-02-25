@@ -24,12 +24,16 @@ private enum Type {
 }
 
 class Obj {
-	abstract Type type () const pure @safe nothrow;
-	override string toString () pure @safe nothrow;	
+	@property abstract Type type () const pure @safe nothrow;
 	abstract Obj eval (ref Obj env) pure @safe nothrow;
+	@property static Obj T () pure @trusted nothrow {
+		static immutable Obj T = mksym("T");
+		return cast(Obj)T;
+	}
 }
 
-private class Obj_Pair : Obj {
+
+package class Obj_Pair : Obj {
 	Obj A;
 	Obj B;
 	this( Obj A, Obj B ) pure @safe nothrow {
@@ -39,36 +43,11 @@ private class Obj_Pair : Obj {
 	override Type type () const pure @safe nothrow {
 		return Type.PAIR;
 	}
-	override string toString () pure @safe nothrow {
-		string ret = "(";
-		Obj X = this;
-		auto first = true;
-		while( isPAIR(X) ) {
-			if( first ) {				
-				first = false;
-			}
-			else {
-				ret ~= " ";
-			}
-			auto val = car(X);
-			if( val is null ) {
-				ret ~= "NIL";
-			}
-			else {
-				ret ~= val.toString();
-			}
-			X = cdr(X);
-		}
-		if( X !is null ) {
-			ret ~= " . " ~ X.toString();
-		}
-		return ret ~ ")";
-	}
 
 	override Obj eval (ref Obj env) pure @safe nothrow {
 		if( A is null ) return null;
 		auto arg = A.eval(env);
-		if( isFUN(arg) ) {
+		if( arg.isFUN ) {
 			return (cast(Obj_Fun)arg)(env, B);
 		}
 		return null;
@@ -76,7 +55,7 @@ private class Obj_Pair : Obj {
 }
 
 
-private class Obj_Sym : Obj {
+package class Obj_Sym : Obj {
 	string name;
 	this( string name ) pure @safe nothrow {
 		this.name = name;
@@ -84,15 +63,12 @@ private class Obj_Sym : Obj {
 	override Type type () const pure @safe nothrow {
 		return Type.SYM;
 	}
-	override string toString () pure @safe nothrow {
-		return name;
-	}
 	override Obj eval (ref Obj env) pure @safe nothrow {
-		return cdr(mapfind(env, this));
+		return mapfind(env, this).cdr;
 	}
 }
 
-private class Obj_Quote : Obj {
+package class Obj_Quote : Obj {
 	Obj inside;
 	this(Obj inside) pure @safe nothrow {
 		this.inside = inside;
@@ -103,16 +79,14 @@ private class Obj_Quote : Obj {
 	override Obj eval (ref Obj env) pure @safe nothrow {
 		return this.inside;
 	}
-	override string toString () pure @safe nothrow {
-		if( inside is null ) {
-			return "'NIL";
-		}
-		return "'" ~ inside.toString();
-	}
+}
+@property inside(Obj O) {
+	if( O.isQUOTE ) return (cast(Obj_Quote)O).inside;
+	return null;
 }
 
 public alias Obj function(ref Obj env, Obj args) pure @safe nothrow Logic_EnvArg;
-private class Obj_Fun : Obj {
+package class Obj_Fun : Obj {
 	Obj proc_code;
 	Obj proc_args;
 	Logic_EnvArg func;
@@ -149,8 +123,8 @@ private class Obj_Fun : Obj {
 		else {
 			auto tmp = proc_args;
 			while( isPAIR(tmp) ) {
-				auto key = car(tmp);
-				auto val = car(args);
+				auto key = tmp.car;
+				auto val = args.car;
 				if( isSYM(key) ) {
 					if( isVARSYM(key) ) {
 						new_env = mapadd(new_env, key, val);
@@ -159,20 +133,12 @@ private class Obj_Fun : Obj {
 						new_env = mapadd(new_env, key, .eval(tmp_env, val));
 					}
 				}
-				tmp = cdr(tmp);
-				args = cdr(args);
+				tmp = tmp.cdr;
+				args = args.cdr;
 			}
 		}
 		assert( new_env !is null );
 		return .eval(new_env, proc_code);
-	}
-	override string toString () pure @safe nothrow {
-		auto args = proc_args ? proc_args.toString() : "?";
-		if( func !is null ) {
-			return "(fun " ~ args ~ " ...)";
-		}
-		auto code = proc_code ? proc_code.toString() : "NIL";
-		return "(fun " ~ args ~ " " ~ code ~ ")";
 	}
 }
 
@@ -187,21 +153,22 @@ bool equal (Obj X, Obj Y) pure @safe nothrow {
 	else if( X is null || Y is null ) {
 		return false;
 	}
-	else if( isSYM(X) && isSYM(Y) ) {
-		return symname(X) == symname(Y);
+	else if( X.isSYM && Y.isSYM ) {
+		return X.name == Y.name;
 	}
-	else if( isPAIR(X) && isPAIR(Y) ) {
-		return equal(car(X), car(Y)) && equal(cdr(X), cdr(Y));
+	else if( X.isPAIR && Y.isPAIR ) {
+		return equal(X.car, Y.car) && equal(X.cdr, Y.cdr);
 	}
-	else if( isQUOTE(X) && isQUOTE(Y) ) {
-		return equal((cast(Obj_Quote)X).inside, (cast(Obj_Quote)Y).inside);
+	else if( X.isQUOTE && Y.isQUOTE ) {
+		return equal(X.inside, Y.inside);
 	}
-	else if( isFUN(X) && isFUN(Y) ) {
+	else if( X.isFUN && Y.isFUN ) {
 		auto funX = cast(Obj_Fun)X;
 		auto funY = cast(Obj_Fun)Y;
-		return equal(funX.proc_code, funY.proc_code)
+		// Order matters, comparison of proc_code could be expensive
+		return funX.func is funY.func
 			&& equal(funX.proc_args, funY.proc_args)
-			&& funX.func is funY.func;
+			&& equal(funX.proc_code, funY.proc_code);
 	}
 	return false; // Will never reach here!
 }
@@ -225,25 +192,25 @@ Obj mkproc (Obj args, Obj code) pure @safe nothrow {
 	return new Obj_Fun(args, code);
 }
 private bool istype( const Obj O, const(Type) T ) pure @safe nothrow {
-	return O !is null && O.type() == T;
+	return O !is null && O.type == T;
 }
-bool isFUN( Obj O ) pure @safe nothrow {
+@property bool isFUN( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.FUN);
 }
-bool isSYM( const Obj O ) pure @safe nothrow {
+@property bool isSYM( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.SYM);
 }
-bool isQUOTE( const Obj O ) pure @safe nothrow {
+@property bool isQUOTE( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.QUOTE);
 }
-bool isPAIR( const Obj O ) pure @safe nothrow {
+@property bool isPAIR( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.PAIR);
 }
-string symname( const Obj O ) pure @safe nothrow {
+@property string name( const Obj O ) pure @safe nothrow {
 	return isSYM(O) ? (cast(const(Obj_Sym))O).name : null;
 }
-bool isVARSYM( const Obj O ) pure @safe nothrow {
-	auto name = symname(O);
+@property bool isVARSYM( const Obj O ) pure @safe nothrow {
+	auto name = O.name;
 	if( name ) {
 		return name !is null && name.length > 0 && name[0] == '$';
 	}
@@ -268,27 +235,27 @@ Obj mklist(Obj[] args ...) pure @safe nothrow {
 	}
 	return ret;
 }
-Obj car(Obj X) pure @safe nothrow {
-	if( isPAIR(X) ) return (cast(Obj_Pair)X).A;
-	else if( isFUN(X) ) return (cast(Obj_Fun)X).proc_args;
+@property Obj car(Obj X) pure @safe nothrow {
+	if( X.isPAIR ) return (cast(Obj_Pair)X).A;
+	else if( X.isFUN ) return (cast(Obj_Fun)X).proc_args;
 	return null;
 }
-Obj setcar(Obj X, Obj Y) pure @safe nothrow {
-	Obj old = car(X);
-	if( isPAIR(X) ) (cast(Obj_Pair)X).A = Y;
+@property Obj car(Obj X, Obj Y) pure @safe nothrow {
+	Obj old = X.car;
+	if( X.isPAIR ) (cast(Obj_Pair)X).A = Y;
 	return old;
 }
-Obj cdr(Obj X) pure @safe nothrow {
-	if( isPAIR(X) ) return (cast(Obj_Pair)X).B;
-	else if( isFUN(X) ) {
+@property Obj cdr(Obj X) pure @safe nothrow {
+	if( X.isPAIR ) return (cast(Obj_Pair)X).B;
+	else if( X.isFUN ) {
 		auto O = (cast(Obj_Fun)X);
 		return O.func is null ? O.proc_code : X;
 	}
 	return null;
 }
-Obj setcdr(Obj X, Obj Y) pure @safe nothrow {
-	Obj old = cdr(X);
-	if( isPAIR(X) ) (cast(Obj_Pair)X).B = Y;
+@property Obj cdr(Obj X, Obj Y) pure @safe nothrow {
+	Obj old = X.cdr;
+	if( X.isPAIR ) (cast(Obj_Pair)X).B = Y;
 	return old;
 }
 
@@ -299,14 +266,12 @@ Obj setcdr(Obj X, Obj Y) pure @safe nothrow {
  * Associative list functions
  */
 Obj mapfind (Obj X, Obj Y) pure @safe nothrow {
-	while( isPAIR(X) ) {
-		auto entry = car(X);
-		if( isPAIR(entry) ) {
-			if( equal(car(entry), Y) ) {
-				return entry;
-			}
+	while( X.isPAIR ) {
+		auto Z = X.car;
+		if( Z.isPAIR && Z.car.equal(Y) ) {
+			return Z;
 		}
-		X = cdr(X);
+		X = X.cdr;
 	}
 	return null;	
 }
@@ -321,7 +286,7 @@ Obj mapadd (Obj X, Obj key, Obj val) pure @safe nothrow {
 
 Obj evlis(ref Obj env, Obj exps) pure @safe nothrow {
 	if( exps is null ) return null;
-	return cons(eval(env, car(exps)), evlis(env, cdr(exps)));
+	return cons(eval(env, exps.car), evlis(env, exps.cdr));
 }
 Obj eval (ref Obj env, Obj X)  pure @safe nothrow {
 	if( X !is null ) {

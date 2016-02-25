@@ -24,129 +24,128 @@ private import lisp.core;
 /*
  * Builtin functions available in the base Lisp environment
  */
-Obj builtin_equal (ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_equal (ref Obj env, Obj args) pure @safe nothrow {
 	Obj prev = null;
 	bool first = true;
 	bool compared = false;
-	while( isPAIR(args) ) {
-		auto A = eval(env,car(args));
+	while( args.isPAIR ) {
+		auto A = eval(env, args.car);
 		if( first ) {
 			first = false;
 		}
 		else {
-			if( ! equal(prev, A) ) {
+			if( ! prev.equal(A) ) {
 				return null;
 			}
 			compared = true;	
 		}
 		prev = A;
-		args = cdr(args);
+		args = args.cdr;
 	}
-	return compared ? mksym("T") : null;
+	return compared ? Obj.T : null;
 }
 
 
-private Obj builtin_quote(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_quote(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	return mkquote(car(args));
+	return mkquote(args.car);
 }
-private Obj builtin_isQUOTE(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_isQUOTE(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	auto A = car(args);
-	return isQUOTE(A) ? mksym("T") : null;
+	auto A = args.car;
+	return A.isQUOTE ? Obj.T : null;
 }
-private Obj builtin_isSYM(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_isSYM(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	auto A = car(args);
-	return isSYM(A) ? mksym("T") : null;
+	auto A = args.car;
+	return A.isSYM ? Obj.T : null;
 }
 
 
-private Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
-	auto proc_args = car(args);
-	auto proc_code = car(cdr(args));
-	return (isSYM(proc_args) || isPAIR(proc_args))
+package Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
+	auto proc_args = args.car;
+	auto proc_code = args.cdr.car;
+	return (proc_args.isSYM || proc_args.isPAIR)
 		 ? mkproc(proc_args, proc_code)
 		 : null;
 }
-private Obj builtin_isFUN(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_isFUN(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	auto A = car(args);
-	return isFUN(A) ? mksym("T") : null;
+	auto A = args.car;
+	return A.isFUN ? Obj.T : null;
 }
-Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
-	auto T = mksym("T");
-	auto cond = equal(eval(env, car(args)), T) ? T : null;
-	auto next = cdr(args);
+package Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
+	auto cond = equal(eval(env, args.car), Obj.T) ? Obj.T : null;
+	auto next = args.cdr;
 	if( cond !is null ) {
-		return eval(env, car(next));
+		return eval(env, next.car);
 	}
-	return eval(env, car(cdr(next)));
+	return eval(env, next.cdr.car);
 }
 
 
-private Obj builtin_isPAIR(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_isPAIR(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	return isPAIR(car(args)) ? mksym("T") : null;
+	return args.car.isPAIR ? Obj.T : null;
 }
-private Obj builtin_isNIL(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_isNIL(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	return car(args) is null ? mksym("T") : null;
+	return args.car is null ? Obj.T : null;
 }
 
 
-private Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	auto A = car(args);
-	auto B = car(cdr(args));
+	auto A = args.car;
+	auto B = args.cdr.car;
 	return cons(A, B);
 }
-private Obj builtin_car(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_car(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	return car(car(args));
+	return args.car.car;
 }
-private Obj builtin_cdr(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_cdr(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	return cdr(car(args));
+	return args.car.cdr;
 }
-Obj builtin_setcar(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_setcar(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	return setcar(car(args), car(cdr(args)));
+	return args.car.car = args.cdr.car;
 }
-Obj builtin_setcdr(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_setcdr(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
-	return setcdr(car(args), car(cdr(args)));
+	return args.car.cdr = args.cdr.car;
 }
 
 
-private Obj builtin_setenv(ref Obj env, Obj args) pure @safe nothrow {
-	return env = car(evlis(env, args));
+package Obj builtin_setenv(ref Obj env, Obj args) pure @safe nothrow {
+	return env = evlis(env, args).car;
 }
-private Obj builtin_env(ref Obj env, Obj args) pure @safe nothrow {
+package Obj builtin_env(ref Obj env, Obj args) pure @safe nothrow {
 	return env;
 }
 
-private Obj builtin_setb(ref Obj env, Obj args) pure @safe nothrow {
-	auto key = eval(env, car(args));
-	auto val = eval(env, car(cdr(args)));
-	if( key !is null && isSYM(key) ) {
+package Obj builtin_setb(ref Obj env, Obj args) pure @safe nothrow {
+	auto key = eval(env, args.car);
+	auto val = eval(env, args.cdr.car);
+	if( key !is null && key.isSYM ) {
 		auto entry = mapfind(env, key);
 		Obj old = null;
 		if( entry is null ) {
 			env = mapadd(env, key, val);
 		}
 		else {
-			old = cdr(entry);
-			setcdr(entry, val);
+			old = entry.cdr;
+			entry.cdr = val;
 		}
 		return old;
 	}
 	return null;
 }
-private Obj builtin_defb(ref Obj env, Obj args) pure @safe nothrow {
-	auto key = eval(env, car(args));
-	auto val = eval(env, car(cdr(args)));
-	if( key !is null && isSYM(key) ) {
+package Obj builtin_defb(ref Obj env, Obj args) pure @safe nothrow {
+	auto key = eval(env, args.car);
+	auto val = eval(env, args.cdr.car);
+	if( key !is null && key.isSYM ) {
 		env = mapadd(env, key, val);
 		return val;
 	}
@@ -154,10 +153,10 @@ private Obj builtin_defb(ref Obj env, Obj args) pure @safe nothrow {
 }
 
 
-private Obj builtin_begin(ref Obj env, Obj args) pure @safe nothrow {
-	while( isPAIR(args) ) {
-		auto exp = car(args);
-		auto next = cdr(args);
+package Obj builtin_begin(ref Obj env, Obj args) pure @safe nothrow {
+	while( args.isPAIR ) {
+		auto exp = args.car;
+		auto next = args.cdr;
 		if( next is null ) {
 			return eval(env, exp);
 		}
@@ -169,9 +168,8 @@ private Obj builtin_begin(ref Obj env, Obj args) pure @safe nothrow {
 
 
 Obj mkenv () pure @safe nothrow {
-	auto T = mksym("T");
 	auto env = mklist(
-		cons(T, T),
+		cons(Obj.T, Obj.T),
 
 		cons("env!", &builtin_setenv, mksym("NEW-ENV")),
 		cons("set!", &builtin_setb, mklist(mksym("SYM"), mksym("VAL"))),

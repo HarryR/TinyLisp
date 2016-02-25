@@ -3,13 +3,13 @@ module lisp.test_core;
 import lisp;
 
 unittest {
-	assert( mklist(mksym("A")).toString() == "(A)" );
-	assert( cons(mksym("A"), null).toString() == "(A)" );
-	assert( mklist(mksym("A"), null).toString() == "(A NIL)" );
-	assert( mklist(mksym("A"), mklist(mksym("B"))).toString() == "(A (B))" );
-	assert( mklist(mksym("A"), mkquote(mklist(mksym("B")))).toString() == "(A '(B))" );
-	assert( mklist(mksym("A"), mksym("B"), mksym("C")).toString() == "(A B C)" );
-	assert( mklist(null).toString() == "(NIL)" );
+	assert( mklist(mksym("A")).sexpr == "(A)" );
+	assert( cons(mksym("A"), null).sexpr == "(A)" );
+	assert( mklist(mksym("A"), null).sexpr == "(A NIL)" );
+	assert( mklist(mksym("A"), mklist(mksym("B"))).sexpr == "(A (B))" );
+	assert( mklist(mksym("A"), mkquote(mklist(mksym("B")))).sexpr == "(A '(B))" );
+	assert( mklist(mksym("A"), mksym("B"), mksym("C")).sexpr == "(A B C)" );
+	assert( mklist(null).sexpr == "(NIL)" );
 
 	auto env = mkenv();
 	assert( cons(mksym("A"), null).eval(env) is null );
@@ -21,8 +21,8 @@ unittest {
 
 unittest {
 	auto testfun = mkfun(&builtin_if, mksym("X"));
-	assert( mkproc(mksym("X"), null).toString() == "(fun X NIL)" );
-	assert( testfun.toString() == "(fun X ...)" );
+	assert( mkproc(mksym("X"), null).sexpr == "(fun X NIL)" );
+	assert( testfun.sexpr == "(fun X ...)" );
 
 	auto env = mkenv();
 	assert( equal(testfun.eval(env), testfun) );
@@ -64,8 +64,8 @@ unittest {
 	assert( ! equal(A, null) );
 	assert( equal(A, A) );
 	assert( isSYM(A) );
-	assert( symname(A) == "A" );
-	assert( symname(A) == symname(A) );
+	assert( name(A) == "A" );
+	assert( name(A) == name(A) );
 
 	auto X = mksym("X");
 	assert( ! equal(A, X) );
@@ -98,16 +98,16 @@ unittest {
 unittest {	
 	assert( mksym("NIL") is null );
 	assert( mksym(null) is null );
-	assert( symname(null) is null );
+	assert( name(null) is null );
 	assert( isPAIR(null) == false );
 	assert( isFUN(null) == false );
 	assert( isSYM(null) == false );
 	Obj A = mksym("A");
 	assert( isSYM(A) );
 	assert( ! isPAIR(A) );
-	assert( symname(A) == symname(A) );
-	assert( symname(A) == "A" );
-	assert( symname(A) !is null );
+	assert( name(A) == name(A) );
+	assert( name(A) == "A" );
+	assert( name(A) !is null );
 	assert( equal(A, A) );
 	assert( isVARSYM(mksym("$DERP")) );
 	assert( ! isVARSYM(mksym("derp")) );
@@ -118,8 +118,9 @@ unittest {
 unittest {
 	assert( cdr(null) is null );
 	assert( car(null) is null );
-	assert( setcar(null, null) is null );
-	assert( setcdr(null, null) is null );
+	Obj empty = null;
+	assert( empty.car is null );
+	assert( empty.cdr is null );
 
 	auto A = mksym("A");
 	auto B = mksym("B");
@@ -128,13 +129,13 @@ unittest {
 	assert( isPAIR(X) );
 	assert( equal(car(X), cdr(X)) );
 
-	auto Y = setcdr(X, B);
+	auto Y = (X.cdr = B);
 	assert( isSYM(Y) );
 	assert( equal(Y, A) );
 	assert( equal(cdr(X), B) );
 	assert( equal(car(X), A) );
 
-	auto Z = setcar(X, B);
+	auto Z = (X.car = B);
 	assert( isSYM(Z) );
 	assert( equal(Z, A) );
 	assert( equal(cdr(X), B) );

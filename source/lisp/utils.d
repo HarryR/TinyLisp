@@ -5,9 +5,9 @@ private import lisp.s11n;
 
 
 string eval (ref core.Obj env, string X) pure @safe nothrow {
-	auto res = core.eval(env, parse(env, X));
-	if( res is null ) {
+	auto RES = core.eval(env, parse(env, X));
+	if( RES is null ) {
 		return "NIL";
 	}
-	return res.toString();
+	return RES.sexpr;
 }
