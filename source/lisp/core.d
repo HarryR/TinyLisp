@@ -222,11 +222,28 @@ private bool istype( const Obj O, const(Type) T ) pure @safe nothrow {
 /*
  * CONS related functions
  */
-Obj cons(string name, Logic_EnvArg builtin, Obj args) pure @safe nothrow {
-	return cons(mksym(name), mkfun(builtin, args));
+Obj cons(string name, Logic_EnvArg builtin) pure @safe nothrow {
+	return cons(mksym(name), mkfun(builtin, null));
 }
+
+Obj cons(string name, string arg, Logic_EnvArg builtin) pure @safe nothrow {
+	return cons(mksym(name), mkfun(builtin, mksym(arg)));
+}
+
+Obj cons(string name, string[] args_list, Logic_EnvArg builtin) pure @safe nothrow {
+	return cons(mksym(name), mkfun(builtin, symlist(args_list)));
+}
+
 Obj cons(Obj A = null, Obj B = null) pure @safe nothrow {
 	return new Obj_Pair(A, B);
+}
+
+Obj symlist(string[] args ...) pure @safe nothrow {
+	Obj ret = null;
+	for( auto i = args.length; i != 0; i-- ) {
+		ret = cons(mksym(args[i - 1]), ret);		
+	}
+	return ret;
 }
 Obj mklist(Obj[] args ...) pure @safe nothrow {
 	Obj ret = null;
