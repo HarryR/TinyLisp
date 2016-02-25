@@ -12,7 +12,7 @@ unittest {
 	assert( mklist(null).sexpr == "(NIL)" );
 
 	auto env = mkenv();
-	assert( cons(mksym("A"), null).eval(env) is null );
+	assert( eval(env, cons(mksym("A"), null)) is null );
 
 	assert( eval(env, "(car (fun X Y))") == "X" );
 	assert( eval(env, "(cdr (fun X Y))") == "Y" );
@@ -25,7 +25,7 @@ unittest {
 	assert( testfun.sexpr == "(fun X ...)" );
 
 	auto env = mkenv();
-	assert( equal(testfun.eval(env), testfun) );
+	assert( equal(eval(env, testfun), testfun) );
 	assert( eval(env, "(def! 'X1 (fun X X))") == "(fun X X)" );
 	assert( eval(env, "(X1)") == "NIL" );
 	assert( eval(env, "(X1 'Y)") == "(Y)" );

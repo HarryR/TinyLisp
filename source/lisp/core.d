@@ -25,7 +25,6 @@ private enum Type {
 
 class Obj {
 	@property abstract Type type () const pure @safe nothrow;
-	abstract Obj eval (ref Obj env) pure @safe nothrow;
 	@property static Obj T () pure @trusted nothrow {
 		static immutable Obj T = mksym("T");
 		return cast(Obj)T;
@@ -43,15 +42,6 @@ package class Obj_Pair : Obj {
 	override Type type () const pure @safe nothrow {
 		return Type.PAIR;
 	}
-
-	override Obj eval (ref Obj env) pure @safe nothrow {
-		if( A is null ) return null;
-		auto arg = A.eval(env);
-		if( arg.isFUN ) {
-			return (cast(Obj_Fun)arg)(env, B);
-		}
-		return null;
-	}
 }
 
 
@@ -63,9 +53,6 @@ package class Obj_Sym : Obj {
 	override Type type () const pure @safe nothrow {
 		return Type.SYM;
 	}
-	override Obj eval (ref Obj env) pure @safe nothrow {
-		return mapfind(env, this).cdr;
-	}
 }
 
 package class Obj_Quote : Obj {
@@ -75,9 +62,6 @@ package class Obj_Quote : Obj {
 	}
 	override Type type () const pure @safe nothrow {
 		return Type.QUOTE;
-	}
-	override Obj eval (ref Obj env) pure @safe nothrow {
-		return this.inside;
 	}
 }
 @property inside(Obj O) {
@@ -102,43 +86,6 @@ package class Obj_Fun : Obj {
 	}
 	override Type type () const pure nothrow @safe {
 		return Type.FUN;
-	}
-	override Obj eval (ref Obj env) pure @safe nothrow {
-		return this;
-	}
-	Obj opCall(ref Obj env, Obj args) pure @safe nothrow {
-		if( func !is null ) {
-			return this.func(env, args);
-		}
-		Obj new_env = env;
-		Obj tmp_env = env;
-		if( isSYM(proc_args) ) {
-			if( isVARSYM(proc_args) ) {
-				new_env = mapadd(env, proc_args, args);
-			}
-			else {
-				new_env = mapadd(env, proc_args, evlis(tmp_env, args));
-			}
-		}
-		else {
-			auto tmp = proc_args;
-			while( isPAIR(tmp) ) {
-				auto key = tmp.car;
-				auto val = args.car;
-				if( isSYM(key) ) {
-					if( isVARSYM(key) ) {
-						new_env = mapadd(new_env, key, val);
-					}
-					else {
-						new_env = mapadd(new_env, key, .eval(tmp_env, val));
-					}
-				}
-				tmp = tmp.cdr;
-				args = args.cdr;
-			}
-		}
-		assert( new_env !is null );
-		return .eval(new_env, proc_code);
 	}
 }
 
@@ -277,8 +224,6 @@ Obj mklist(Obj[] args ...) pure @safe nothrow {
 }
 
 
-
-
 /*
  * Associative list functions
  */
@@ -298,18 +243,3 @@ Obj mapfind (Obj X, string Y) pure @safe nothrow {
 Obj mapadd (Obj X, Obj key, Obj val) pure @safe nothrow {
 	return cons(cons(key, val), X);
 }
-
-
-
-Obj evlis(ref Obj env, Obj exps) pure @safe nothrow {
-	if( exps is null ) return null;
-	return cons(eval(env, exps.car), evlis(env, exps.cdr));
-}
-Obj eval (ref Obj env, Obj X)  pure @safe nothrow {
-	if( X !is null ) {
-		return X.eval(env);
-	}
-	return null;
-}
-
-

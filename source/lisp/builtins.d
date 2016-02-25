@@ -20,6 +20,7 @@
 module lisp.builtins;
 
 private import lisp.core;
+private import lisp.evaluator;
 
 package Obj builtin_equal (ref Obj env, Obj args) pure @safe nothrow {
 	Obj prev = null;
@@ -146,7 +147,7 @@ Obj mkenv () pure @safe nothrow {
 		cons("eq?", ["X", "Y"], &builtin_equal),
 
 		cons("env", (ref env, args) => env),
-		
+
 		cons("if", ["X", "$TRUE", "$ELSE"], &builtin_if),
 		cons("fun", ["$ARGS", "$CODE"], &builtin_fun),
 		cons("begin", "EXPR", &builtin_begin),
