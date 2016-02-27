@@ -22,25 +22,22 @@ module lisp.evaluator;
 private import lisp.core;
 private import lisp.s11n;
 
-private Obj evaluateFun(ref Obj env, Obj_Fun obj, Obj args) pure @safe nothrow {
-	if( obj.func !is null ) {
-		return obj.func(env, args);
-	}
+private Obj prepareFunEnv(Obj env, Obj proc_args, Obj call_args ) pure @safe nothrow {
 	Obj new_env = env;
 	Obj tmp_env = env;
-	if( obj.proc_args.isSYM ) {
-		if( obj.proc_args.isVARSYM ) {
-			new_env = mapadd(env, obj.proc_args, args);
+	if( proc_args.isSYM ) {
+		if( proc_args.isVARSYM ) {
+			new_env = mapadd(env, proc_args, call_args);
 		}
 		else {
-			new_env = mapadd(env, obj.proc_args, evlis(tmp_env, args));
+			new_env = mapadd(env, proc_args, evlis(tmp_env, call_args));
 		}
 	}
 	else {
-		auto tmp = obj.proc_args;
+		auto tmp = proc_args;
 		while( tmp.isPAIR ) {
 			auto key = tmp.car;
-			auto val = args.car;
+			auto val = call_args.car;
 			if( key.isSYM ) {
 				if( key.isVARSYM ) {
 					new_env = mapadd(new_env, key, val);
@@ -50,9 +47,18 @@ private Obj evaluateFun(ref Obj env, Obj_Fun obj, Obj args) pure @safe nothrow {
 				}
 			}
 			tmp = tmp.cdr;
-			args = args.cdr;
+			call_args = call_args.cdr;
 		}
 	}
+	return new_env;
+}
+
+private Obj evaluateFun(ref Obj env, Obj_Fun obj, Obj args) pure @safe nothrow {
+	if( obj.func !is null ) {
+		return obj.func(env, args);
+	}
+
+	Obj new_env = prepareFunEnv(env, obj.proc_args, args);
 	assert( new_env !is null );
 	return eval(new_env, obj.proc_code);
 }
