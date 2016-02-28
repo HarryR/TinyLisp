@@ -17,9 +17,9 @@
    Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-module lisp.s11n;
+module tinylisp.s11n;
 
-private import lisp.core;
+private import tinylisp.core;
 private import std.ascii: isWhite;
 
 

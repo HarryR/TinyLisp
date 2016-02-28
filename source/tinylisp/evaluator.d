@@ -17,10 +17,10 @@
    Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-module lisp.evaluator;
+module tinylisp.evaluator;
 
-private import lisp.core;
-private import lisp.s11n;
+private import tinylisp.core;
+private import tinylisp.s11n;
 
 private Obj prepareFunEnv(Obj env, Obj proc_args, Obj call_args ) pure @safe nothrow {
 	Obj new_env = env;

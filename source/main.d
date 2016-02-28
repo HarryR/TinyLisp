@@ -21,7 +21,7 @@ import std.getopt: getopt, GetOptException;
 import std.outbuffer: OutBuffer;
 import std.algorithm: strip, startsWith;
 import core.sys.posix.unistd: isatty;
-import lisp;
+import tinylisp;
 
 
 private void repl (ref Obj env ) {

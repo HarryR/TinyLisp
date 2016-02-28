@@ -1,6 +1,6 @@
-module lisp.test_core;
+module tinylisp.test_core;
 
-import lisp;
+import tinylisp;
 
 unittest {
 	assert( mklist(mksym("A")).sexpr == "(A)" );

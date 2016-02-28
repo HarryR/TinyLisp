@@ -1,6 +1,6 @@
-module lisp.test_s11n;
+module tinylisp.test_s11n;
 
-import lisp;
+import tinylisp;
 
 unittest {
 	auto env = mkenv();

@@ -17,10 +17,10 @@
    Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-module lisp.builtins;
+module tinylisp.builtins;
 
-private import lisp.core;
-private import lisp.evaluator;
+private import tinylisp.core;
+private import tinylisp.evaluator;
 
 package Obj builtin_equal (ref Obj env, Obj args) pure @safe nothrow {
 	Obj prev = null;

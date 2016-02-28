@@ -17,7 +17,7 @@
    Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-module lisp.core;
+module tinylisp.core;
 
 private enum Type {
 	SYM, PAIR, FUN, QUOTE

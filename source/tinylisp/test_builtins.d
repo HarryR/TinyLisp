@@ -1,6 +1,6 @@
-module lisp.test_builtins;
+module tinylisp.test_builtins;
 
-import lisp;
+import tinylisp;
 
 unittest {
 	Obj env = mkenv();
