@@ -2,7 +2,7 @@
 
 [![Build Status](https://drone.io/github.com/HarryR/TinyLisp/status.png)](https://drone.io/github.com/HarryR/TinyLisp/latest)
 
-The `Tiny` Lisp 1.5 inspired interpreter is written around 1000 lines of Digital Mars D and supports a minimal but consistent suite of built-in functions which should be familiar to Lisp and Scheme users, however a major distinction is that this Lisp variant doesn't have integers, strings or useful data types, it only has symbols and expressions. The five data types supported are: `SYM`, `PAIR`, `FUN`, `QUOTE` and `NIL`.
+The `Tiny` Lisp 1.5 inspired interpreter is written around 1000 lines of Digital Mars D and supports a minimal but consistent suite of built-in functions which should be familiar to Lisp and Scheme users, however a major distinction is that this Lisp variant doesn't have integers, strings or useful data types, it only has symbols and expressions. The six data types supported are: `SYM`, `PAIR`, `FUN`, `BUILTIN`, `QUOTE` and `NIL`.
 
 Consider this programming Lisp, in ultra-hard difficulty, a Lisp-flavoured dynamic assembly language for symbolic logic. The basic constructs and method of evaluation should be compared to metaprogramming, the runtime provides a way of constructing, organising and operating on symbols to compute the desired results, but lacks the complex data types necessary to make life easy.
 
@@ -59,15 +59,14 @@ The small number of built-in functions are easily remembered, for reference they
 
 ### Bugs & TODO?
 
-LOL! There are no bugs... merely features which should be taken into consideration by the user to avoid to avoid errors ;)
-
-On a more serious note [SafeD](http://dlang.org/safed.html) is enforced throughout the interpreter, combined with graceful failure when functions are passed `null` values, thorough unit testing and good code coverage it means that the only time the interpreter should crash if the runtime behavior causes a call chain which exceeds the process stack limit.
+[SafeD](http://dlang.org/safed.html) is enforced throughout the interpreter to prevent bugs, combined with graceful failure when functions are passed `null` values, thorough unit testing and good code coverage it means that the only time the interpreter should crash if the runtime behavior causes a call chain which exceeds the process stack limit.
 
  * `(cdr! (car (env)) (env))` = segfault during `Obj.toString()` and `equal()` because recursive references aren't taken into consideration.
  * Useful standard library or libraries
+ * Closures
+ * Quasiquote, slicing, e.g. backtick, comma and `,@` operators 
  * More interesting examples
  * Ad-hoc evaluation (interpret data as code, like `eval`)
- * Unit testing framework
  * Useful syntax and parsing errors
 
 ## Syntax Conventions
@@ -275,7 +274,25 @@ Change the B record of a the pair `X` to the new value in `Y`, returns the old v
 
 #### `(fun? (X) ...)`
 
-Is `X` a function which can be used in the left hand side of an expression?
+Is `X` a function or builtin which can be used in the left hand side of an expression?
+
+```
+> (fun? if)
+= T
+> (fun? (fun X))
+= T
+```
+
+#### `(builtin? (X) ...)`
+
+Is `X` a native builtin function.
+
+```
+> (builtin? if)
+= T
+> (builtin? (fun X))
+= NIL
+```
 
 #### `(sym? (X) ...)`
 

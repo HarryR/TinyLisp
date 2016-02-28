@@ -55,8 +55,10 @@ unittest {
 unittest {
 	auto env = mkenv();
 	assert( eval(env, "(fun? if)") == "T" );
+	assert( eval(env, "(builtin? if)") == "T" );
 	assert( eval(env, "(fun? X)") == "NIL" );
 	assert( eval(env, "(fun? (fun x x))") == "T" );
+	assert( eval(env, "(builtin? (fun x x))") == "NIL" );
 	assert( eval(env, "(if T T NIL)") == "T" );
 	assert( eval(env, "(if NIL T NIL)") == "NIL" );
 	assert( eval(env, "(if T NIL T)") == "NIL" );
@@ -143,7 +145,8 @@ unittest {
 	assert( isPAIR(mapfind(env, "env")) );
 	assert( isPAIR(mapfind(env, "cdr")) );
 	assert( isSYM(car(mapfind(env, "eq?"))) );
-	assert( isFUN(cdr(mapfind(env, "eq?"))) );
+	assert( isBUILTIN(cdr(mapfind(env, "eq?"))) );
+	assert( ! isFUN(cdr(mapfind(env, "eq?"))) );
 	assert( eval(env, "env") == "(fun ? ...)" );
 	assert( null is mapfind(env, "diwehfewi") );
 }

@@ -178,23 +178,21 @@ private string quoteToSExpr (Obj O) pure @safe nothrow {
 	return "'" ~ O.inside.sexpr;
 }
 
-private string funToSExpr (Obj O) pure @safe nothrow {
-	Obj proc_code = (cast(Obj_Fun)O).proc_code;
-	Obj proc_args = (cast(Obj_Fun)O).proc_args;
-	Logic_EnvArg func = (cast(Obj_Fun)O).func;
-
-	auto args = proc_args ? proc_args.sexpr : "?";
-	if( func !is null ) {
-		return "(fun " ~ args ~ " ...)";
-	}
-	auto code = proc_code ? proc_code.sexpr : "NIL";
+private string funToSExpr (Obj_Fun O) pure @safe nothrow {
+	auto args = O.args_spec ? O.args_spec.sexpr : "?";
+	auto code = O.code ? O.code.sexpr : "NIL";
 	return "(fun " ~ args ~ " " ~ code ~ ")";
+}
+
+private string builtinToSExpr(Obj_Builtin O) pure @safe nothrow {
+	return "(fun " ~ (O.args_spec is null ? "?" : O.args_spec.sexpr) ~ " ...)";
 }
 
 @property string sexpr(Obj O) pure @safe nothrow {
 	if( O.isPAIR ) return pairToSExpr(O);
 	if( O.isSYM ) return O.name;
 	if( O.isQUOTE ) return quoteToSExpr(O);
-	if( O.isFUN ) return funToSExpr(O);
+	if( O.isFUN ) return funToSExpr(cast(Obj_Fun)O);
+	if( O.isBUILTIN ) return builtinToSExpr(cast(Obj_Builtin)O);
 	return null;
 }

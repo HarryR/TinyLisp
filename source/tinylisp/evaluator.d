@@ -22,19 +22,19 @@ module tinylisp.evaluator;
 private import tinylisp.core;
 private import tinylisp.s11n;
 
-private Obj prepareFunEnv(Obj env, Obj proc_args, Obj call_args ) pure @safe nothrow {
+private Obj prepareFunEnv(Obj env, Obj args_spec, Obj call_args ) pure @safe nothrow {
 	Obj new_env = env;
 	Obj tmp_env = env;
-	if( proc_args.isSYM ) {
-		if( proc_args.isVARSYM ) {
-			new_env = mapadd(env, proc_args, call_args);
+	if( args_spec.isSYM ) {
+		if( args_spec.isVARSYM ) {
+			new_env = mapadd(env, args_spec, call_args);
 		}
 		else {
-			new_env = mapadd(env, proc_args, evlis(tmp_env, call_args));
+			new_env = mapadd(env, args_spec, evlis(tmp_env, call_args));
 		}
 	}
 	else {
-		auto tmp = proc_args;
+		auto tmp = args_spec;
 		while( tmp.isPAIR ) {
 			auto key = tmp.car;
 			auto val = call_args.car;
@@ -54,13 +54,9 @@ private Obj prepareFunEnv(Obj env, Obj proc_args, Obj call_args ) pure @safe not
 }
 
 private Obj evaluateFun(ref Obj env, Obj_Fun obj, Obj args) pure @safe nothrow {
-	if( obj.func !is null ) {
-		return obj.func(env, args);
-	}
-
-	Obj new_env = prepareFunEnv(env, obj.proc_args, args);
+	Obj new_env = prepareFunEnv(env, obj.args_spec, args);
 	assert( new_env !is null );
-	return eval(new_env, obj.proc_code);
+	return eval(new_env, obj.code);
 }
 
 private Obj evaluatePair( ref Obj env, Obj_Pair obj ) pure @safe nothrow {
@@ -68,6 +64,9 @@ private Obj evaluatePair( ref Obj env, Obj_Pair obj ) pure @safe nothrow {
 	auto arg = eval(env, obj.A);
 	if( arg.isFUN ) {
 		return evaluateFun(env, cast(Obj_Fun)arg, obj.B);
+	}
+	else if( arg.isBUILTIN ) {
+		return (cast(Obj_Builtin)arg)(env, obj.B);
 	}
 	return null;
 }
@@ -91,7 +90,7 @@ Obj eval (ref Obj env, Obj X)  pure @safe nothrow {
 	else if( X.isQUOTE ) {
 		return X.inside;
 	}
-	else if( X.isFUN ) {
+	else if( X.isFUN || X.isBUILTIN ) {
 		return X;
 	}
 	return null;

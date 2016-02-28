@@ -20,7 +20,7 @@
 module tinylisp.core;
 
 private enum Type {
-	SYM, PAIR, FUN, QUOTE
+	SYM, PAIR, FUN, QUOTE, BUILTIN
 }
 
 class Obj {
@@ -69,20 +69,42 @@ package class Obj_Quote : Obj {
 	return null;
 }
 
-public alias Obj function(ref Obj env, Obj args) pure @safe nothrow Logic_EnvArg;
-package class Obj_Fun : Obj {
-	Obj proc_code;
-	Obj proc_args;
-	Logic_EnvArg func;
-	this( Logic_EnvArg builtin, Obj args) pure @safe nothrow {
-		this.func = builtin;
-		this.proc_code = null;
-		this.proc_args = args;
+public alias Obj function(ref Obj env, Obj args) pure @safe nothrow Builtin;
+package abstract class Obj_HasArgs : Obj {
+	Obj args_spec;
+}
+
+package abstract class Obj_Builtin : Obj_HasArgs {
+	override Type type () const pure nothrow @safe {
+		return Type.BUILTIN;
 	}
-	this( Obj args, Obj code) pure @safe nothrow {
-		this.func = null;
-		this.proc_code = code;
-		this.proc_args = args;
+	@property abstract uint builtin_typeid() pure @safe nothrow;
+	abstract Obj opCall(ref Obj env, Obj args) pure @safe nothrow;
+	abstract bool equals(Obj_Builtin O) pure @safe nothrow;
+}
+
+package class Obj_BuiltinFun : Obj_Builtin {
+	Builtin func;
+	this( Builtin builtin, Obj args_spec) pure @safe nothrow {
+		this.func = builtin;
+		this.args_spec = args_spec;
+	}
+	override Obj opCall(ref Obj env, Obj args) pure @safe nothrow {
+		return this.func(env, args);
+	}
+	override uint builtin_typeid() pure @safe nothrow {
+		return 1;
+	}
+	override bool equals(Obj_Builtin O) pure @safe nothrow {
+		return O.builtin_typeid == builtin_typeid && (cast(Obj_BuiltinFun)O).func == this.func;
+	}
+}
+
+package class Obj_Fun : Obj_HasArgs {
+	Obj code;
+	this( Obj args_spec, Obj code) pure @safe nothrow {
+		this.code = code;
+		this.args_spec = args_spec;
 	}
 	override Type type () const pure nothrow @safe {
 		return Type.FUN;
@@ -109,13 +131,15 @@ bool equal (Obj X, Obj Y) pure @safe nothrow {
 	else if( X.isQUOTE && Y.isQUOTE ) {
 		return equal(X.inside, Y.inside);
 	}
+	else if( X.isBUILTIN && Y.isBUILTIN ) {
+		return (cast(Obj_Builtin)X).equals(cast(Obj_Builtin)Y);
+	}
 	else if( X.isFUN && Y.isFUN ) {
 		auto funX = cast(Obj_Fun)X;
 		auto funY = cast(Obj_Fun)Y;
-		// Order matters, comparison of proc_code could be expensive
-		return funX.func is funY.func
-			&& equal(funX.proc_args, funY.proc_args)
-			&& equal(funX.proc_code, funY.proc_code);
+		// Order matters, comparison of code could be expensive
+		return equal(funX.args_spec, funY.args_spec)
+			&& equal(funX.code, funY.code);
 	}
 	return false; // Will never reach here!
 }
@@ -132,8 +156,8 @@ Obj mksym (string name) pure @safe nothrow {
 	if( name is null || name == "NIL" ) return null;
 	return new Obj_Sym(name);
 }
-Obj mkfun (Logic_EnvArg func, Obj args) pure @safe nothrow {
-	return new Obj_Fun(func, args);
+Obj mkfun (Builtin func, Obj args) pure @safe nothrow {
+	return new Obj_BuiltinFun(func, args);
 }
 Obj mkproc (Obj args, Obj code) pure @safe nothrow {
 	return new Obj_Fun(args, code);
@@ -143,6 +167,9 @@ private bool istype( const Obj O, const(Type) T ) pure @safe nothrow {
 }
 @property bool isFUN( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.FUN);
+}
+@property bool isBUILTIN( const Obj O ) pure @safe nothrow {
+	return istype(O, Type.BUILTIN);
 }
 @property bool isSYM( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.SYM);
@@ -169,15 +196,15 @@ private bool istype( const Obj O, const(Type) T ) pure @safe nothrow {
 /*
  * CONS related functions
  */
-Obj cons(string name, Logic_EnvArg builtin) pure @safe nothrow {
+Obj cons(string name, Builtin builtin) pure @safe nothrow {
 	return cons(mksym(name), mkfun(builtin, null));
 }
 
-Obj cons(string name, string arg, Logic_EnvArg builtin) pure @safe nothrow {
+Obj cons(string name, string arg, Builtin builtin) pure @safe nothrow {
 	return cons(mksym(name), mkfun(builtin, mksym(arg)));
 }
 
-Obj cons(string name, string[] args_list, Logic_EnvArg builtin) pure @safe nothrow {
+Obj cons(string name, string[] args_list, Builtin builtin) pure @safe nothrow {
 	return cons(mksym(name), mkfun(builtin, symlist(args_list)));
 }
 
@@ -201,25 +228,25 @@ Obj mklist(Obj[] args ...) pure @safe nothrow {
 }
 @property Obj car(Obj X) pure @safe nothrow {
 	if( X.isPAIR ) return (cast(Obj_Pair)X).A;
-	else if( X.isFUN ) return (cast(Obj_Fun)X).proc_args;
+	else if( X.isFUN || X.isBUILTIN ) return (cast(Obj_HasArgs)X).args_spec;
 	return null;
 }
 @property Obj car(Obj X, Obj Y) pure @safe nothrow {
 	Obj old = X.car;
 	if( X.isPAIR ) (cast(Obj_Pair)X).A = Y;
+	else if( X.isFUN ) (cast(Obj_Fun)X).args_spec = Y;
 	return old;
 }
 @property Obj cdr(Obj X) pure @safe nothrow {
 	if( X.isPAIR ) return (cast(Obj_Pair)X).B;
-	else if( X.isFUN ) {
-		auto O = (cast(Obj_Fun)X);
-		return O.func is null ? O.proc_code : X;
-	}
+	else if( X.isFUN ) return (cast(Obj_Fun)X).code;
+	else if( X.isBUILTIN ) return X;
 	return null;
 }
 @property Obj cdr(Obj X, Obj Y) pure @safe nothrow {
 	Obj old = X.cdr;
 	if( X.isPAIR ) (cast(Obj_Pair)X).B = Y;
+	else if( X.isFUN ) (cast(Obj_Fun)X).code = Y;
 	return old;
 }
 

@@ -52,7 +52,7 @@ package Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
 }
 
 package Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
-	auto cond = equal(eval(env, args.car), Obj.T) ? Obj.T : null;
+	auto cond = eval(env, args.car) !is null ? Obj.T : null;
 	auto next = args.cdr;
 	if( cond !is null ) {
 		return eval(env, next.car);
@@ -135,8 +135,13 @@ Obj mkenv () pure @safe nothrow {
 		cons("cons?", ["X"], (ref env, args) =>
 			evlis(env, args).car.isPAIR ? Obj.T : null),
 
-		cons("fun?", ["X"], (ref env, args) =>
-			evlis(env, args).car.isFUN ? Obj.T : null),
+		cons("fun?", ["X"], (ref env, args) {
+			auto arg = evlis(env, args).car;
+			return arg.isFUN || arg.isBUILTIN ? Obj.T : null;
+		}),
+
+		cons("builtin?", ["X"], (ref env, args) =>
+			evlis(env, args).car.isBUILTIN ? Obj.T : null),
 
 		cons("quote?", ["X"], (ref env, args) =>
 			evlis(env, args).car.isQUOTE ? Obj.T : null),
