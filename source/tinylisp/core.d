@@ -20,7 +20,7 @@
 module tinylisp.core;
 
 private enum Type {
-	SYM, PAIR, FUN, QUOTE, BUILTIN
+	SYM, PAIR, FUN, QUOTE, BUILTIN, CLOSURE
 }
 
 class Obj {
@@ -64,8 +64,31 @@ package class Obj_Quote : Obj {
 		return Type.QUOTE;
 	}
 }
+
+/++
+ + Allows for variables to be bound into a scope which can
+ + be passed around, when a closure is evaluated its bindings
+ + are added to the environment, then it's inside is evaluated.
+ +
+ +    (closure (X Y) (fun (Z) (list X Y Z)))
+ +/
+package class Obj_Closure : Obj_Quote {
+	Obj bindings;
+	this( Obj bindings, Obj inside ) pure @safe nothrow {
+		super(inside);
+		this.bindings = bindings;
+	}
+	override Type type () const pure nothrow @safe {
+		return Type.CLOSURE;
+	}	
+}
+
 @property inside(Obj O) {
-	if( O.isQUOTE ) return (cast(Obj_Quote)O).inside;
+	if( O.isQUOTE || O.isCLOSURE ) return (cast(Obj_Quote)O).inside;
+	return null;
+}
+@property bindings(Obj O) {
+	if( O.isCLOSURE ) return (cast(Obj_Closure)O).bindings;
 	return null;
 }
 
@@ -134,6 +157,9 @@ bool equal (Obj X, Obj Y) pure @safe nothrow {
 	else if( X.isBUILTIN && Y.isBUILTIN ) {
 		return (cast(Obj_Builtin)X).equals(cast(Obj_Builtin)Y);
 	}
+	else if( X.isCLOSURE && Y.isCLOSURE ) {
+		return equal(X.bindings, Y.bindings) && equal(X.inside, Y.inside);
+	}
 	else if( X.isFUN && Y.isFUN ) {
 		auto funX = cast(Obj_Fun)X;
 		auto funY = cast(Obj_Fun)Y;
@@ -156,6 +182,9 @@ Obj mksym (string name) pure @safe nothrow {
 	if( name is null || name == "NIL" ) return null;
 	return new Obj_Sym(name);
 }
+Obj mkclosure (Obj bindings, Obj inside) pure @safe nothrow {
+	return new Obj_Closure(bindings, inside);
+}
 Obj mkfun (Builtin func, Obj args) pure @safe nothrow {
 	return new Obj_BuiltinFun(func, args);
 }
@@ -176,6 +205,9 @@ private bool istype( const Obj O, const(Type) T ) pure @safe nothrow {
 }
 @property bool isQUOTE( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.QUOTE);
+}
+@property bool isCLOSURE( const Obj O ) pure @safe nothrow {
+	return istype(O, Type.CLOSURE);
 }
 @property bool isPAIR( const Obj O ) pure @safe nothrow {
 	return istype(O, Type.PAIR);
@@ -229,24 +261,28 @@ Obj mklist(Obj[] args ...) pure @safe nothrow {
 @property Obj car(Obj X) pure @safe nothrow {
 	if( X.isPAIR ) return (cast(Obj_Pair)X).A;
 	else if( X.isFUN || X.isBUILTIN ) return (cast(Obj_HasArgs)X).args_spec;
+	else if( X.isCLOSURE ) return (cast(Obj_Closure)X).bindings;
 	return null;
 }
 @property Obj car(Obj X, Obj Y) pure @safe nothrow {
 	Obj old = X.car;
 	if( X.isPAIR ) (cast(Obj_Pair)X).A = Y;
 	else if( X.isFUN ) (cast(Obj_Fun)X).args_spec = Y;
+	else if( X.isCLOSURE ) (cast(Obj_Closure)X).bindings = Y;
 	return old;
 }
 @property Obj cdr(Obj X) pure @safe nothrow {
 	if( X.isPAIR ) return (cast(Obj_Pair)X).B;
 	else if( X.isFUN ) return (cast(Obj_Fun)X).code;
 	else if( X.isBUILTIN ) return X;
+	else if( X.isCLOSURE ) return (cast(Obj_Closure)X).inside;
 	return null;
 }
 @property Obj cdr(Obj X, Obj Y) pure @safe nothrow {
 	Obj old = X.cdr;
 	if( X.isPAIR ) (cast(Obj_Pair)X).B = Y;
 	else if( X.isFUN ) (cast(Obj_Fun)X).code = Y;
+	else if( X.isCLOSURE ) (cast(Obj_Closure)X).inside = Y;
 	return old;
 }
 

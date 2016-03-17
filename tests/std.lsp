@@ -97,3 +97,10 @@
 = (C B A)
 > (reverse (list 'A))
 = (A)
+
+> (def! 'setup-lambda (fun (NIL) (begin (def! 'derp 'poop) (lambda (derp) (A) (begin (def! 'OLD derp) (set! 'derp A) (list OLD derp))))))
+> (def! 'evil (setup-lambda))
+> (evil 'A)
+= (poop A)
+> (evil 'B)
+= (A B)

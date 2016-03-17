@@ -311,4 +311,15 @@
 			)
 		)
 	))
+
+
+	; Create a function with captured environment
+	;
+	;	> (lambda (CAP1 CAP2) (ARG1) (list CAP1 CAP2 ARG1))
+	;
+	(def! 'lambda (fun ($CAPTURE $ARGS $CODE)
+		(eval (list fun $ARGS
+			(eval (list closure $CAPTURE $CODE))
+		))
+	))
 )

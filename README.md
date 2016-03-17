@@ -50,7 +50,8 @@ The small number of built-in functions are easily remembered, for reference they
   * `(cdr! (X Y) ...)` - Set `B` record of pair `X` to `Y`
   * `(set! (SYM VAL) ...)` - Overwrite or add symbol to env
   * `(def! (SYM VAL) ...)` - Add symbol to env
-  * `(fun? (X) ...)` - Is `X` a function?
+  * `(fun? (X) ...)` - Is `X` a function or builtin?
+  * `(builtin? (X) ...)` - Is `X` a native builtin function?
   * `(sym? (X) ...)` - Is `X` a symbol?
   * `(quote? (X) ...)` - Is `X` quote encapsulated?
   * `(cons? (X) ...)` - Is `X` a pair? - constructed with (cons ...)

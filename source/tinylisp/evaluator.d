@@ -59,6 +59,17 @@ private Obj evaluateFun(ref Obj env, Obj_Fun obj, Obj args) pure @safe nothrow {
 	return eval(new_env, obj.code);
 }
 
+private Obj evaluateClosure(ref Obj env, Obj_Closure obj) pure @safe nothrow {
+	Obj new_env = env;
+	auto bindings = obj.bindings;
+	while( bindings ) {
+		new_env = cons(bindings.car, new_env);
+		bindings = bindings.cdr;
+	}
+	assert( new_env !is null );
+	return eval(new_env, obj.inside);
+}
+
 private Obj evaluatePair( ref Obj env, Obj_Pair obj ) pure @safe nothrow {
 	if( obj.A is null ) return null;
 	auto arg = eval(env, obj.A);
@@ -92,6 +103,9 @@ Obj eval (ref Obj env, Obj X)  pure @safe nothrow {
 	}
 	else if( X.isFUN || X.isBUILTIN ) {
 		return X;
+	}
+	else if( X.isCLOSURE ) {
+		return evaluateClosure(env, cast(Obj_Closure)X);
 	}
 	return null;
 }

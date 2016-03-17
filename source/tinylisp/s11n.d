@@ -184,6 +184,10 @@ private string funToSExpr (Obj_Fun O) pure @safe nothrow {
 	return "(fun " ~ args ~ " " ~ code ~ ")";
 }
 
+private string closureToSExpr (Obj_Closure O) pure @safe nothrow {
+	return "(closure " ~ O.bindings.sexpr ~ " " ~ O.inside.sexpr ~ ")";
+}
+
 private string builtinToSExpr(Obj_Builtin O) pure @safe nothrow {
 	return "(fun " ~ (O.args_spec is null ? "?" : O.args_spec.sexpr) ~ " ...)";
 }
@@ -194,5 +198,6 @@ private string builtinToSExpr(Obj_Builtin O) pure @safe nothrow {
 	if( O.isQUOTE ) return quoteToSExpr(O);
 	if( O.isFUN ) return funToSExpr(cast(Obj_Fun)O);
 	if( O.isBUILTIN ) return builtinToSExpr(cast(Obj_Builtin)O);
-	return null;
+	if( O.isCLOSURE ) return closureToSExpr(cast(Obj_Closure)O);
+	return "NIL";
 }

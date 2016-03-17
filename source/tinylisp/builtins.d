@@ -51,6 +51,22 @@ package Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
 		 : null;
 }
 
+package Obj builtin_closure(ref Obj env, Obj args) pure @safe nothrow {
+	auto capture = args.car;
+	auto inside = args.cdr.car;
+	Obj bindings = null;
+
+	while( capture ) {
+		auto envref = mapfind(env, capture.car);
+		if( envref ) {
+			bindings = cons(envref, bindings);
+		}
+		capture = capture.cdr;
+	}
+
+	return mkclosure(bindings, inside);
+}
+
 package Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
 	auto cond = eval(env, args.car) !is null ? Obj.T : null;
 	auto next = args.cdr;
@@ -63,6 +79,11 @@ package Obj builtin_if(ref Obj env, Obj args) pure @safe nothrow {
 package Obj builtin_cons(ref Obj env, Obj args) pure @safe nothrow {
 	args = evlis(env, args);
 	return cons(args.car, args.cdr.car);
+}
+
+package Obj builtin_eval(ref Obj env, Obj args) pure @safe nothrow {
+	args = evlis(env, args);
+	return eval(env, args.car);
 }
 
 package Obj builtin_setcar(ref Obj env, Obj args) pure @safe nothrow {
@@ -143,6 +164,9 @@ Obj mkenv () pure @safe nothrow {
 		cons("builtin?", ["X"], (ref env, args) =>
 			evlis(env, args).car.isBUILTIN ? Obj.T : null),
 
+		cons("closure?", ["X"], (ref env, args) =>
+			evlis(env, args).car.isCLOSURE ? Obj.T : null),
+
 		cons("quote?", ["X"], (ref env, args) =>
 			evlis(env, args).car.isQUOTE ? Obj.T : null),
 
@@ -155,6 +179,8 @@ Obj mkenv () pure @safe nothrow {
 
 		cons("if", ["X", "$TRUE", "$ELSE"], &builtin_if),
 		cons("fun", ["$ARGS", "$CODE"], &builtin_fun),
+		cons("closure", ["$CAPTURE", "INSIDE"], &builtin_closure),
+		cons("eval", "EXPR", &builtin_eval),
 		cons("begin", "EXPR", &builtin_begin),
 		cons("cons", ["A", "B"], &builtin_cons),
 
