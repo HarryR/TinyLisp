@@ -104,3 +104,11 @@
 = (poop A)
 > (evil 'B)
 = (A B)
+
+> (def! 'derpX (fun (ARG) (list 'X ARG)))
+> (def! 'derpY (fun (ARG) (list 'Y ARG)))
+> (def! 'derpZ (fun (ARG) (list 'Z ARG)))
+> (derpZ (derpY (derpX 'A)))
+= (Z (Y (X A)))
+> (chain 'A derpX derpY derpZ)
+= (Z (Y (X A)))

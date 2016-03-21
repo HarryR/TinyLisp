@@ -40,6 +40,7 @@ The small number of built-in functions are easily remembered, for reference they
   * `(env! NEW-ENV)` - Set environment
   * `(if (X $THEN $ELSE) ...)` - Conditional
   * `(fun ($ARGS $CODE) ...)` - Create function
+  * `(eval (EXPR) ...)` - Evaluate a constructed expression
   * `(begin EXPR ...)` - Evaluate many, return last
   * `(eq? (A B) ...)` - Are `A` and `B` equal?
   * `(cons (A B) ...)` - Create pair
@@ -52,6 +53,8 @@ The small number of built-in functions are easily remembered, for reference they
   * `(def! (SYM VAL) ...)` - Add symbol to env
   * `(fun? (X) ...)` - Is `X` a function or builtin?
   * `(builtin? (X) ...)` - Is `X` a native builtin function?
+  * `(closure ($CAPTURE INSIDE))` - Capture variables into a scope
+  * `(closure? (X) ...)` - Is `X` a closure?
   * `(sym? (X) ...)` - Is `X` a symbol?
   * `(quote? (X) ...)` - Is `X` quote encapsulated?
   * `(cons? (X) ...)` - Is `X` a pair? - constructed with (cons ...)
@@ -293,6 +296,20 @@ Is `X` a native builtin function.
 = T
 > (builtin? (fun X))
 = NIL
+```
+
+
+#### `(closure? (X) ...)`
+
+Is `X` a native closure scope?
+
+#### `(eval (EXPR) ...)`
+
+Evaluate the expression in the current environment
+
+```
+> (eval (list cons T T))
+= (T . T)
 ```
 
 #### `(sym? (X) ...)`

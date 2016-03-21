@@ -322,4 +322,34 @@
 			(eval (list closure $CAPTURE $CODE))
 		))
 	))
+
+	(def! 'chain-list (fun (ARG FUNS)
+		(if (list-end? FUNS)
+			(eval (list (car FUNS) 'ARG))
+			(chain-list
+				(eval (list (car FUNS) 'ARG))
+				(cdr FUNS)))
+	))
+
+	; Allows for tacit/chain programming
+	;
+	;	> (chain arg fun1 fun2 fun3)
+	;
+	;  is equivalent to:
+	;
+	;   (fun3 (fun2 (fun1 arg)))
+	;
+	(def! 'chain (fun ARGS
+		(chain-list (car ARGS) (cdr ARGS))
+	))
+
+
+	; Apply arguments to a function
+	;
+	;	> (apply sym? (list 'T))
+	;	= T
+	;
+	(def! 'apply (fun (FUN ARGS)
+		(eval (cons FUN ARGS))
+	))
 )
