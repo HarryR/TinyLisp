@@ -112,3 +112,6 @@
 = (Z (Y (X A)))
 > (chain 'A derpX derpY derpZ)
 = (Z (Y (X A)))
+
+> (cond (T 'DERP))
+= DERP

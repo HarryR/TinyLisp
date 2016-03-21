@@ -352,4 +352,24 @@
 	(def! 'apply (fun (FUN ARGS)
 		(eval (cons FUN ARGS))
 	))
+
+
+	; The value returned by COND is computed as follows:
+	;
+	;  if condition1 is true (not NIL), then return result1;
+	;  else if condition2 is true then return result2;
+	;  else if ...;
+	;
+	(def! 'cond (fun $CLAUSES
+		(begin
+			(def! 'CLAUSE (car $CLAUSES))
+			(if (eval (car CLAUSE))
+				(eval (car (cdr CLAUSE)))
+				(if (list-end? $CLAUSES)
+					NIL
+					(apply cond (cdr $CLAUSES))
+				)
+			)
+		)
+	))
 )
