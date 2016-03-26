@@ -29,6 +29,7 @@ class Obj {
 		static immutable Obj T = mksym("T");
 		return cast(Obj)T;
 	}
+	abstract bool equals(Obj O) pure @safe nothrow;
 }
 
 
@@ -42,6 +43,11 @@ package class Obj_Pair : Obj {
 	override Type type () const pure @safe nothrow {
 		return Type.PAIR;
 	}
+	override bool equals(Obj O) pure @safe nothrow {
+		assert(O !is null && O.type() == type());
+		auto other = cast(Obj_Pair)O;
+		return equal(A, other.car) && equal(B, other.cdr);
+	}
 }
 
 
@@ -53,6 +59,11 @@ package class Obj_Sym : Obj {
 	override Type type () const pure @safe nothrow {
 		return Type.SYM;
 	}
+	override bool equals(Obj O) pure @safe nothrow {
+		assert(O !is null && O.type() == type());
+		Obj_Sym other = cast(Obj_Sym)O;
+		return name == other.name;
+	}
 }
 
 package class Obj_Quote : Obj {
@@ -62,6 +73,11 @@ package class Obj_Quote : Obj {
 	}
 	override Type type () const pure @safe nothrow {
 		return Type.QUOTE;
+	}
+	override bool equals(Obj O) pure @safe nothrow {
+		assert(O !is null && O.type() == type());
+		Obj_Quote other = cast(Obj_Quote)O;
+		return equal(inside, other.inside);
 	}
 }
 
@@ -80,7 +96,12 @@ package class Obj_Closure : Obj_Quote {
 	}
 	override Type type () const pure nothrow @safe {
 		return Type.CLOSURE;
-	}	
+	}
+	override bool equals(Obj O) pure @safe nothrow {
+		assert(O !is null && O.type() == type());
+		Obj_Closure other = cast(Obj_Closure)O;
+		return equal(bindings, other.bindings) && equal(inside, other.inside);
+	}
 }
 
 @property inside(Obj O) {
@@ -101,9 +122,8 @@ package abstract class Obj_Builtin : Obj_HasArgs {
 	override Type type () const pure nothrow @safe {
 		return Type.BUILTIN;
 	}
-	@property abstract uint builtin_typeid() pure @safe nothrow;
 	abstract Obj opCall(ref Obj env, Obj args) pure @safe nothrow;
-	abstract bool equals(Obj_Builtin O) pure @safe nothrow;
+	@property abstract protected uint builtin_typeid() const pure @safe nothrow;
 }
 
 package class Obj_BuiltinFun : Obj_Builtin {
@@ -115,11 +135,12 @@ package class Obj_BuiltinFun : Obj_Builtin {
 	override Obj opCall(ref Obj env, Obj args) pure @safe nothrow {
 		return this.func(env, args);
 	}
-	override uint builtin_typeid() pure @safe nothrow {
+	override uint builtin_typeid() const pure @safe nothrow {
 		return 1;
 	}
-	override bool equals(Obj_Builtin O) pure @safe nothrow {
-		return O.builtin_typeid == builtin_typeid && (cast(Obj_BuiltinFun)O).func == this.func;
+	override bool equals(Obj O) pure @safe nothrow {		
+		return (cast(Obj_BuiltinFun)O).builtin_typeid == builtin_typeid
+			&& (cast(Obj_BuiltinFun)O).func == this.func;
 	}
 }
 
@@ -131,6 +152,13 @@ package class Obj_Fun : Obj_HasArgs {
 	}
 	override Type type () const pure nothrow @safe {
 		return Type.FUN;
+	}
+	override bool equals(Obj O) pure @safe nothrow {
+		assert( O !is null && O.type() == type() );
+		auto funY = cast(Obj_Fun)O;
+		// Order matters, comparison of code could be expensive
+		return equal(args_spec, funY.args_spec)
+			&& equal(code, funY.code);
 	}
 }
 
@@ -145,29 +173,10 @@ bool equal (Obj X, Obj Y) pure @safe nothrow {
 	else if( X is null || Y is null ) {
 		return false;
 	}
-	else if( X.isSYM && Y.isSYM ) {
-		return X.name == Y.name;
+	else if( X.type() == Y.type() ) {
+		return X.equals(Y);
 	}
-	else if( X.isPAIR && Y.isPAIR ) {
-		return equal(X.car, Y.car) && equal(X.cdr, Y.cdr);
-	}
-	else if( X.isQUOTE && Y.isQUOTE ) {
-		return equal(X.inside, Y.inside);
-	}
-	else if( X.isBUILTIN && Y.isBUILTIN ) {
-		return (cast(Obj_Builtin)X).equals(cast(Obj_Builtin)Y);
-	}
-	else if( X.isCLOSURE && Y.isCLOSURE ) {
-		return equal(X.bindings, Y.bindings) && equal(X.inside, Y.inside);
-	}
-	else if( X.isFUN && Y.isFUN ) {
-		auto funX = cast(Obj_Fun)X;
-		auto funY = cast(Obj_Fun)Y;
-		// Order matters, comparison of code could be expensive
-		return equal(funX.args_spec, funY.args_spec)
-			&& equal(funX.code, funY.code);
-	}
-	return false; // Will never reach here!
+	return false;
 }
 
 

@@ -51,6 +51,7 @@ package Obj builtin_fun(ref Obj env, Obj args) pure @safe nothrow {
 		 : null;
 }
 
+
 package Obj builtin_closure(ref Obj env, Obj args) pure @safe nothrow {
 	auto capture = args.car;
 	auto inside = args.cdr.car;
@@ -97,31 +98,38 @@ package Obj builtin_setcdr(ref Obj env, Obj args) pure @safe nothrow {
 }
 
 package Obj builtin_setb(ref Obj env, Obj args) pure @safe nothrow {
-	auto key = eval(env, args.car);
-	auto val = eval(env, args.cdr.car);
-	if( key !is null && key.isSYM ) {
-		auto entry = mapfind(env, key);
-		Obj old = null;
-		if( entry is null ) {
-			env = mapadd(env, key, val);
+	Obj retval;
+	while( args.isPAIR ) {		
+		auto key = eval(env, args.car);
+		auto val = eval(env, args.cdr.car);
+		if( key !is null && key.isSYM ) {
+			auto entry = mapfind(env, key);
+			if( entry is null ) {
+				env = mapadd(env, key, val);
+				entry = car(env);
+			}
+			else {
+				entry.cdr = val;
+			}
+			retval = cons(entry, retval);
 		}
-		else {
-			old = entry.cdr;
-			entry.cdr = val;
-		}
-		return old;
+		args = args.cdr.cdr;
 	}
-	return null;
+	return retval;
 }
 
 package Obj builtin_defb(ref Obj env, Obj args) pure @safe nothrow {
-	auto key = eval(env, args.car);
-	auto val = eval(env, args.cdr.car);
-	if( key !is null && key.isSYM ) {
-		env = mapadd(env, key, val);
-		return val;
+	Obj retval;
+	while( args.isPAIR ) {		
+		auto key = eval(env, args.car);
+		auto val = eval(env, args.cdr.car);
+		if( key !is null && key.isSYM ) {
+			env = mapadd(env, key, val);
+			retval = cons(car(env), retval);
+		}
+		args = args.cdr.cdr;
 	}
-	return null;
+	return retval;
 }
 
 package Obj builtin_begin(ref Obj env, Obj args) pure @safe nothrow {

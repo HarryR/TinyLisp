@@ -112,21 +112,22 @@ unittest {
 	auto env = mkenv();
 	assert( eval(env, "(def!)") == "NIL" );
 	assert( eval(env, "(set!)") == "NIL" );
-	assert( eval(env, "(set! 'Z T)") == "NIL" );
+	assert( eval(env, "(set! 'Z T)") == "((Z . T))" );
+	assert( eval(env, "Z") == "T" );
 
-	assert( eval(env, "(def! 'X T)") == "T" );
+	assert( eval(env, "(def! 'X T)") == "((X . T))" );
 	assert( eval(env, "X") == "T" );
 	assert( eval(env, "(cdr (car (env)))") == "T" );
 	// New variable shadows previous
-	assert( eval(env, "(def! 'X NIL)") == "NIL" );
+	assert( eval(env, "(def! 'X NIL)") == "((X))" );
 	assert( eval(env, "X") == "NIL" );
 	assert( eval(env, "(cdr (car (env)))") == "NIL" );
 	assert( eval(env, "(cdr (car (cdr (env))))") == "T" );
 	// Ensure that set! overwrites variable
-	assert( eval(env, "(set! 'X 'Y)") == "NIL" );
+	assert( eval(env, "(set! 'X 'Y)") == "((X . Y))" );
 	assert( eval(env, "(cdr (car (env)))") == "Y" );
 	assert( eval(env, "(cdr (car (cdr (env))))") == "T" );
-	assert( eval(env, "(set! 'X 'Y)") == "Y" );
+	assert( eval(env, "(set! 'X 'Y)") == "((X . Y))" );
 	assert( eval(env, "(cdr (car (cdr (env))))") == "T" );
 }
 

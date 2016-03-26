@@ -15,8 +15,51 @@
 	)))
 
 
-	; Determine if any of the arguments evaluate to T (True)
-	; Returns T if any are T, or NIL if none are
+	(def! 'let (fun (ARGS $INSIDE)
+		(fun (ARG)
+			(set! (car ARG) (cdr ARG))
+		)
+	))
+
+	; Return NIL of any of the arguments are not T, or lists of T (recursively)
+	;
+	;	> (all? T T)
+	;	= T
+	;
+	;	> (all? T NIL T)
+	;	= NIL
+	;
+	(def! 'all-list? (fun (LIST)
+		(if (cons? LIST)
+			(begin
+				(def! 'ITEM (car LIST))
+				(if (cons? ITEM)
+					; Item is another list...
+					(if (all-list? ITEM)
+						; ITEM (a list) contains only T values..
+						(if (list-end? LIST)
+							T
+							(all-list? (cdr LIST))
+						)
+					)
+					; Otherwise item is a value
+					(if (eq? ITEM T)
+						; Item is T ... move to next item
+						(if (list-end? LIST)
+							T
+							(all-list? (cdr LIST))
+						)
+					)
+				)
+			)
+		)
+	))
+	(def! 'all? (fun LIST
+		(all-list? LIST)
+	))
+
+
+	; Determine if any of the arguments evaluate are non-NIL
 	;
 	;	> (any? . T)
 	;	= T
@@ -25,20 +68,15 @@
 	;	= T
 	;
 	(def! 'any-list? (fun (LIST)
-		(if (cons? LIST)
-			(if (cons? (car LIST))
-				; Item is another list...
-				(if (any-list? (car LIST)) T)
-				; Otherwise item is a value
-				(if (eq? (car LIST) T)
-					T
-					(if (list-end? LIST)
-						NIL
-						(any-list? (cdr LIST))
-					)
-				)
-			)
-		)
+		(if (cons? (car LIST))
+			; Item is another list...
+			(if (any-list? (car LIST)) T)
+			; Otherwise item is a value
+			(if (car LIST)
+				T
+				(if (list-end? LIST)
+					NIL
+					(any-list? (cdr LIST)))))
 	))
 	(def! 'any? (fun LIST (begin
 		(any-list? LIST)
@@ -163,49 +201,6 @@
 	))
 
 
-	(def! 't? (fun (VALUE)
-		(eq? VALUE T)
-	))
-
-
-	; Return NIL of any of the arguments are not T, or lists of T (recursively)
-	;
-	;	> (all? T T)
-	;	= T
-	;
-	;	> (all? T NIL T)
-	;	= NIL
-	;
-	(def! 'all-list? (fun (LIST)
-		(if (cons? LIST)
-			(begin
-				(def! 'ITEM (car LIST))
-				(if (cons? ITEM)
-					; Item is another list...
-					(if (all-list? ITEM)
-						; ITEM (a list) contains only T values..
-						(if (list-end? LIST)
-							T
-							(all-list? (cdr LIST))
-						)
-					)
-					; Otherwise item is a value
-					(if (eq? ITEM T)
-						; Item is T ... move to next item
-						(if (list-end? LIST)
-							T
-							(all-list? (cdr LIST))
-						)
-					)
-				)
-			)
-		)
-	))
-	(def! 'all? (fun LIST
-		(all-list? LIST)
-	))
-
-
 	; Use a function to filter a list
 	; Pass each item of the list to the function
 	; Return a list containing only items where the function returns T
@@ -232,9 +227,12 @@
 	;	> (map (fun (X) (eq? X 'DERP)) (list 'A 'B 'DERP 'C 'DERP))
 	;	= (NIL NIL T NIL T)
 	;
-	(def! 'map (fun (FUN LIST)
+	(def! 'map (fun (LIST FUN)
 		(if (cons? LIST)
-			(cons (FUN (car LIST)) (map FUN (cdr LIST)))
+			(cons
+				(FUN (car LIST))
+				(map (cdr LIST) FUN)
+			)
 		)
 	))
 

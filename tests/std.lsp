@@ -76,7 +76,7 @@
 > (all? T NIL T)
 = NIL
 
-> (map (fun (X) (eq? X 'DERP)) (list 'A 'B 'DERP 'C 'DERP))
+> (map (list 'A 'B 'DERP 'C 'DERP) (fun (X) (eq? X 'DERP)))
 = (NIL NIL T NIL T)
 
 > (reduce (fun (A B) (if (eq? (if A T) (if B T)) A)) T (list T T T))

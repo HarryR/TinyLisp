@@ -91,12 +91,12 @@ Obj evlis(ref Obj env, Obj exps) pure @safe nothrow {
 	return cons(eval(env, exps.car), evlis(env, exps.cdr));
 }
 
-Obj eval (ref Obj env, Obj X)  pure @safe nothrow {
+Obj eval (ref Obj ENV, Obj X)  pure @safe nothrow {
 	if( X.isPAIR ) {
-		return evaluatePair(env, cast(Obj_Pair)X);
+		return evaluatePair(ENV, cast(Obj_Pair)X);
 	}
 	else if( X.isSYM ) {
-		return evaluateSymbol(env, cast(Obj_Sym)X);
+		return evaluateSymbol(ENV, cast(Obj_Sym)X);
 	}
 	else if( X.isQUOTE ) {
 		return X.inside;
@@ -105,7 +105,7 @@ Obj eval (ref Obj env, Obj X)  pure @safe nothrow {
 		return X;
 	}
 	else if( X.isCLOSURE ) {
-		return evaluateClosure(env, cast(Obj_Closure)X);
+		return evaluateClosure(ENV, cast(Obj_Closure)X);
 	}
 	return null;
 }

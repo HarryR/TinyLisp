@@ -26,25 +26,25 @@ unittest {
 
 	auto env = mkenv();
 	assert( equal(eval(env, testfun), testfun) );
-	assert( eval(env, "(def! 'X1 (fun X X))") == "(fun X X)" );
+	assert( eval(env, "(def! 'X1 (fun X X))") == "((X1 . (fun X X)))" );
 	assert( eval(env, "(X1)") == "NIL" );
 	assert( eval(env, "(X1 'Y)") == "(Y)" );
 	assert( eval(env, "(X1 'Y 'Z)") == "(Y Z)" );
 	assert( eval(env, "(X1 Y Z)") == "(NIL NIL)" );
 
-	assert( eval(env, "(def! 'X2 (fun $X $X))") == "(fun $X $X)" );
+	assert( eval(env, "(def! 'X2 (fun $X $X))") == "((X2 . (fun $X $X)))" );
 	assert( eval(env, "(X2)") == "NIL" );
 	assert( eval(env, "(X2 'Y)") == "('Y)" );
 	assert( eval(env, "(X2 'Y 'Z)") == "('Y 'Z)" );
 	assert( eval(env, "(X2 Y Z)") == "(Y Z)" );
 
-	assert( eval(env, "(def! 'X3 (fun (A B) B))") == "(fun (A B) B)" );
+	assert( eval(env, "(def! 'X3 (fun (A B) B))") == "((X3 . (fun (A B) B)))" );
 	assert( eval(env, "(X3)") == "NIL" );
 	assert( eval(env, "(X3 'Y)") == "NIL" );
 	assert( eval(env, "(X3 'Y 'Z)") == "Z" );
 	assert( eval(env, "(X3 Y Z)") == "NIL" );
 
-	assert( eval(env, "(def! 'X4 (fun (A $B) $B))") == "(fun (A $B) $B)" );
+	assert( eval(env, "(def! 'X4 (fun (A $B) $B))") == "((X4 . (fun (A $B) $B)))" );
 	assert( eval(env, "(X4)") == "NIL" );
 	assert( eval(env, "(X4 'Y)") == "NIL" );
 	assert( eval(env, "(X4 'Y 'Z)") == "'Z" );
