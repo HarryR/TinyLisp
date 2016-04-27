@@ -104,12 +104,8 @@ package class Obj_Closure : Obj_Quote {
 	}
 }
 
-@property inside(Obj O) {
+@property inside(Obj O) pure @safe nothrow {
 	if( O.isQUOTE || O.isCLOSURE ) return (cast(Obj_Quote)O).inside;
-	return null;
-}
-@property bindings(Obj O) {
-	if( O.isCLOSURE ) return (cast(Obj_Closure)O).bindings;
 	return null;
 }
 
