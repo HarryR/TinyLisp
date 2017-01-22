@@ -1,3 +1,4 @@
 .dub
-/tinylisp
+/tinylisp-repl
+/tinylisp-httpd
 __test__library__

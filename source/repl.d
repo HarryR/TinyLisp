@@ -20,6 +20,7 @@ import std.stdio: File, stdin, write, writeln;
 import std.getopt: getopt, GetOptException;
 import std.outbuffer: OutBuffer;
 import std.algorithm: strip, startsWith;
+private import std.ascii: isWhite;
 import core.sys.posix.unistd: isatty;
 import tinylisp;
 

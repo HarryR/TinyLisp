@@ -6,8 +6,8 @@ build:
 	dub build
 
 test: build
+	./tinylisp-repl -t tests/std.lsp
 	dub test
-	./tinylisp -t tests/std.lsp
 
 clean:
 	dub clean

@@ -233,6 +233,11 @@ private bool istype( const Obj O, const(Type) T ) pure @safe nothrow {
 /*
  * CONS related functions
  */
+
+Obj cons(string name, string value) pure @safe nothrow {
+	return cons(mksym(name), mksym(value));
+}
+
 Obj cons(string name, Builtin builtin) pure @safe nothrow {
 	return cons(mksym(name), mkfun(builtin, null));
 }
@@ -310,4 +315,10 @@ Obj mapfind (Obj X, string Y) pure @safe nothrow {
 }
 Obj mapadd (Obj X, Obj key, Obj val) pure @safe nothrow {
 	return cons(cons(key, val), X);
+}
+Obj mapadd (Obj X, string key, Obj val) pure @safe nothrow {
+	return cons(cons(mksym(key), val), X);
+}
+Obj mapadd (Obj X, string key, string val) pure @safe nothrow {
+	return cons(cons(mksym(key), mksym(val)), X);
 }

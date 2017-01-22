@@ -3,5 +3,26 @@
 	"description": "Minimal symbolic Lisp 1.5-style interpreter",
 	"authors": ["Harry Roberts"],
 	"homepage": "https://github.com/HarryR/TinyLisp/",
-	"license": "GPL-2.0"
+	"license": "GPL-2.0",
+	"targetType": "none",
+	"configurations": [
+		{
+			"name": "repl",
+			"targetType": "executable",
+			"mainSourceFile": "source/repl.d",
+			"excludedSourceFiles": ["source/httpd.d"],
+			"targetName": "tinylisp-repl",
+		},
+		{
+			"name": "httpd",
+			"targetType": "executable",
+			"mainSourceFile": "source/httpd.d",
+			"excludedSourceFiles": ["source/repl.d"],
+			"targetName": "tinylisp-httpd",
+			"versions": ["VibeDefaultMain"],
+			"dependencies": {
+				"vibe-d": "~>0.7.29"
+			}
+		}
+	]	
 }
