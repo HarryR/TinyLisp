@@ -4,22 +4,12 @@
 	; 	> (zip (list 'A 'B) (list 'C 'D))
 	;	= ((A . C) (B . D))
 	;
-	(def! 'zip (fun (LIST-A LIST-B) (begin			
-		(def! 'CAN-ZIP (if (cons? LIST-A) (cons? LIST-B)))
-		(if CAN-ZIP (begin
+	(def! 'zip (fun (LIST-A LIST-B)
+		(if (if (cons? LIST-A) (cons? LIST-B))
 			(cons
 				(cons (car LIST-A) (car LIST-B))
-				(zip (cdr LIST-A) (cdr LIST-B))
-			)
-		))
-	)))
+				(zip (cdr LIST-A) (cdr LIST-B))))))
 
-
-	(def! 'let (fun (ARGS $INSIDE)
-		(fun (ARG)
-			(set! (car ARG) (cdr ARG))
-		)
-	))
 
 	; Return NIL of any of the arguments are not T, or lists of T (recursively)
 	;
@@ -370,4 +360,20 @@
 			)
 		)
 	))
+
+
+	; Remembers the previous value, and returns T if input has changed
+	;
+	;   > (def! 'X (latch 'A))
+	;   > (X 'A)
+	;	= NIL
+	;	> (X 'B)
+	;	= T
+	;	> (X 'B)
+	;	= NIL
+	;
+	(def! 'latch (fun (VAL)
+		(lambda (VAL) (NEWVAL)
+			(if (not-T? (eq? VAL NEWVAL))
+				(begin (set! 'VAL NEWVAL) T)))))
 )

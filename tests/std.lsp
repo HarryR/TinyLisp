@@ -115,3 +115,12 @@
 
 > (cond (T 'DERP))
 = DERP
+
+; Test that the latch works
+> (def! 'X (latch 'A))
+> (X 'A)
+= NIL
+> (X 'B)
+= T
+> (X 'B)
+= NIL
