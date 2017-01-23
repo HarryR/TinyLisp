@@ -49,7 +49,11 @@ private Obj parseSymbol(ref Obj env, string str, ref int offs, ref bool ok) pure
 		ok = false;
 		return null;
 	}
-	return mksym(str[start .. offs]);
+	auto sym = mksym(str[start .. offs]);
+	if( str[start] == ':' ) {
+		return mkquote(sym);
+	}
+	return sym;
 }
 
 private Obj parseQuoted(ref Obj env, string str, ref int offs, ref bool ok) pure @safe nothrow {
